@@ -1,8 +1,8 @@
 <p align="center">
   <h1 align="center">@cocaxcode/devflow-mcp</h1>
   <p align="center">
-    <strong>Conecta Jira con GitHub/GitLab desde tu AI assistant.</strong><br/>
-    32 tools · Jira Cloud + Server · GitHub + GitLab · Flows personalizables · Reglas configurables
+    <strong>Connect Jira with GitHub/GitLab from your AI assistant.</strong><br/>
+    32 tools &middot; Jira Cloud + Server &middot; GitHub + GitLab &middot; Custom flows &middot; Configurable rules
   </p>
 </p>
 
@@ -22,53 +22,51 @@
 </p>
 
 <p align="center">
-  <a href="#el-problema">El Problema</a> ·
-  <a href="#instalacion">Instalacion</a> ·
-  <a href="#just-talk-to-it">Just Talk to It</a> ·
-  <a href="#tools">Tools</a> ·
-  <a href="#flows">Flows</a> ·
-  <a href="#reglas">Reglas</a> ·
-  <a href="#almacenamiento">Almacenamiento</a> ·
-  <a href="#arquitectura">Arquitectura</a> ·
-  <a href="#contribuir">Contribuir</a>
+  <a href="#the-problem">The Problem</a> &middot;
+  <a href="#installation">Installation</a> &middot;
+  <a href="#just-talk-to-it">Just Talk to It</a> &middot;
+  <a href="#tools">Tools</a> &middot;
+  <a href="#flows">Flows</a> &middot;
+  <a href="#rules">Rules</a> &middot;
+  <a href="#storage">Storage</a> &middot;
+  <a href="#compatibility">Compatibility</a> &middot;
+  <a href="#architecture">Architecture</a>
 </p>
 
 ---
 
-## El Problema
+## The Problem
 
-Trabajas con Jira, GitHub/GitLab y la terminal. Cada vez que empiezas una tarea:
+You work with Jira, GitHub/GitLab, and the terminal. Every time you start a task:
 
-1. Abres Jira, buscas el issue, lees el detalle
-2. Vas a la terminal, haces checkout a main, pull, creas la branch
-3. Vuelves a Jira, mueves el issue a "In Progress"
-4. Cuando terminas, push, crear PR, volver a Jira...
+1. Open Jira, find the issue, read the details
+2. Go to the terminal, checkout main, pull, create a branch
+3. Back to Jira, move the issue to "In Progress"
+4. When done, push, create PR, back to Jira again...
 
-**devflow-mcp** te da todo esto como herramientas MCP que tu AI assistant (Claude Code, Cursor, Windsurf, etc.) puede usar directamente. Cada herramienta funciona de forma independiente — la IA orquesta, el MCP ejecuta.
-
-**Lo que lo diferencia:**
+**devflow-mcp** gives you all of this as MCP tools your AI assistant (Claude Code, Cursor, Windsurf, etc.) can use directly. Each tool works independently — the AI orchestrates, the MCP executes.
 
 | Feature | devflow-mcp |
 |---------|------------|
-| Jira Cloud + Server | Auto-detecta version (v2/v3) |
-| GitHub + GitLab | Cloud y self-hosted |
-| Flows personalizables | Playbooks YAML editables |
-| Reglas configurables | Global + override por proyecto |
-| Multi-proyecto | Cada proyecto con su conexion |
-| Guard de seguridad | Bloquea si hay cambios sin pushear |
-| Confirmacion explicita | Push, merge, branch, transiciones |
+| Jira Cloud + Server | Auto-detects version (v2/v3) |
+| GitHub + GitLab | Cloud and self-hosted |
+| Custom flows | Editable YAML playbooks |
+| Configurable rules | Global + per-project overrides |
+| Multi-project | Each project with its own connection |
+| Safety guards | Blocks if there are uncommitted/unpushed changes |
+| Explicit confirmation | Push, merge, branch, transitions |
 
 ---
 
-## Instalacion
+## Installation
 
-### Claude Code (recomendado)
+### Claude Code (recommended)
 
 ```bash
-# Instalacion global (disponible en todos tus proyectos)
+# Global installation (available across all your projects)
 claude mcp add devflow --scope user -- npx -y @cocaxcode/devflow-mcp
 
-# O instalacion por proyecto
+# Or per-project installation
 claude mcp add devflow -- npx -y @cocaxcode/devflow-mcp
 ```
 
@@ -107,7 +105,7 @@ claude mcp add devflow -- npx -y @cocaxcode/devflow-mcp
 ### Cursor / Windsurf
 
 ```json
-// .cursor/mcp.json o .windsurf/mcp.json
+// .cursor/mcp.json or .windsurf/mcp.json
 {
   "mcpServers": {
     "devflow": {
@@ -135,27 +133,27 @@ claude mcp add devflow -- npx -y @cocaxcode/devflow-mcp
 
 ## Just Talk to It
 
-No necesitas memorizar nombres de herramientas. Habla con tu AI assistant de forma natural:
+You don't need to memorize tool names. Talk to your AI assistant naturally:
 
-### Empezar una tarea
+### Start a task
 
-> "Vamos con PROJ-123"
+> _"Let's work on PROJ-123"_
 
-La IA lee el issue, resume la tarea, busca si ya hay branch, crea una nueva si no, mueve a "In Progress" y asigna el issue — todo siguiendo el flow `start-task`.
+The AI reads the issue, summarizes the task, checks if a branch already exists, creates one if not, moves the issue to "In Progress", and assigns it — all following the `start-task` flow.
 
-### Consultar issues
+### List your issues
 
-> "Dame mis tareas del proyecto ACME"
+> _"Show me my tasks for the ACME project"_
 
 ```
-ACME-45  Corregir login OAuth       In Progress  High
-ACME-52  Refactor del dashboard     To Do        Medium
-ACME-61  Actualizar dependencias    To Do        Low
+ACME-45  Fix OAuth login             In Progress  High
+ACME-52  Dashboard refactor          To Do        Medium
+ACME-61  Update dependencies         To Do        Low
 ```
 
-### Crear branch y cambiar de estado
+### Create a branch
 
-> "Crea una branch fix para PROJ-456 con descripcion fix-oauth-redirect"
+> _"Create a fix branch for PROJ-456 with description fix-oauth-redirect"_
 
 ```
 Preview:
@@ -163,321 +161,326 @@ Preview:
   base: main
   actions: checkout main → pull → create branch
 
-¿Confirmas? (confirm: true para ejecutar)
+Confirm? (confirm: true to execute)
 ```
 
-### Push con seguridad
+### Push with safety
 
-> "Pushea los cambios"
+> _"Push my changes"_
 
 ```
 Preview:
   branch: feat/PROJ-123-add-login
-  commits pendientes:
+  pending commits:
     - a1b2c3d feat: add login component
     - d4e5f6g feat: add auth service
 
-¿Confirmas? (confirm: true para ejecutar)
+Confirm? (confirm: true to execute)
 ```
 
-### Merge con deteccion de conflictos
+### Merge with conflict detection
 
-> "Mergea la rama main en mi branch actual"
+> _"Merge main into my current branch"_
 
-Si hay conflictos, te dice exactamente en que archivos:
+If there are conflicts, it tells you exactly which files:
 
 ```
-Conflicto detectado:
+Conflict detected:
   - src/auth/login.ts
   - src/config/routes.ts
 
-Resuelve los archivos y haz commit para completar el merge.
+Resolve the files and commit to complete the merge.
 ```
 
-### Crear un PR
+### Create a PR
 
-> "Crea un PR con titulo 'feat: add OAuth login'"
+> _"Create a PR titled 'feat: add OAuth login'"_
 
 ```
-PR creado:
+PR created:
   url: https://github.com/org/repo/pull/42
   title: feat: add OAuth login
   provider: github
 ```
 
-### Comentar en Jira
+### Comment on Jira
 
-> "Comenta en PROJ-123 que el PR ya esta listo para review"
+> _"Comment on PROJ-123 that the PR is ready for review"_
 
 ```
 Preview:
   issue: PROJ-123
-  comentario: "PR listo para review: https://github.com/org/repo/pull/42"
+  comment: "PR ready for review: https://github.com/org/repo/pull/42"
 
-¿Confirmas? (confirm: true para publicar)
+Confirm? (confirm: true to publish)
 ```
 
 ---
 
 ## Tools
 
-32 herramientas organizadas en 5 categorias:
+32 tools organized in 5 categories:
 
-### Proyectos (5 tools)
+### Projects (5 tools)
 
-| Tool | Descripcion |
+| Tool | Description |
 |------|------------|
-| `df_project_setup` | Configurar un nuevo proyecto (Jira + Git, auto-detecta todo) |
-| `df_project_update` | Modificar configuracion de un proyecto |
-| `df_project_list` | Listar todos los proyectos configurados |
-| `df_project_switch` | Cambiar el proyecto activo |
-| `df_project_delete` | Eliminar un proyecto |
+| `df_project_setup` | Configure a new project (Jira + Git, auto-detects everything) |
+| `df_project_update` | Modify project configuration |
+| `df_project_list` | List all configured projects |
+| `df_project_switch` | Switch the active project |
+| `df_project_delete` | Delete a project |
 
 <details>
-<summary>Ejemplo: configurar un proyecto</summary>
+<summary>Example: setting up a project</summary>
 
 ```
-Usa df_project_setup con:
-  name: "mi-proyecto"
-  jiraUrl: "https://mi-empresa.atlassian.net"
-  jiraEmail: "dev@empresa.com"
+df_project_setup with:
+  name: "my-project"
+  jiraUrl: "https://my-company.atlassian.net"
+  jiraEmail: "dev@company.com"
   jiraToken: "ATATT3x..."
   jiraProjectKey: "PROJ"
   gitToken: "ghp_..."
-  paths: ["C:/repos/mi-proyecto"]
+  paths: ["C:/repos/my-project"]
 
-Auto-detecta:
-  ✓ Jira Cloud (API v3)
-  ✓ GitHub (cocaxcode/mi-proyecto)
-  ✓ Base branch: main
+Auto-detects:
+  - Jira Cloud (API v3)
+  - GitHub (org/my-project)
+  - Base branch: main
 ```
 </details>
 
 ### Jira (6 tools)
 
-| Tool | Descripcion | Confirmacion |
+| Tool | Description | Confirmation |
 |------|------------|:---:|
-| `df_issues` | Listar mis issues asignados (filtra por proyecto) | — |
-| `df_issue` | Detalle completo de un issue | — |
-| `df_statuses` | Transiciones disponibles para un issue | — |
-| `df_transition` | Mover issue a otro estado | Si |
-| `df_assign` | Asignar issue al usuario actual | — |
-| `df_comment` | Comentar en un issue | Si |
+| `df_issues` | List my assigned issues (filters by project) | — |
+| `df_issue` | Full issue detail | — |
+| `df_statuses` | Available transitions for an issue | — |
+| `df_transition` | Move issue to another status | Yes |
+| `df_assign` | Assign issue to current user | — |
+| `df_comment` | Comment on an issue | Yes |
 
 <details>
-<summary>Reglas que aplican a Jira</summary>
+<summary>Rules that apply to Jira</summary>
 
-- **no-close-issues** (activa por defecto): Bloquea mover issues a estados finales (Done, Closed, Resolved, Finalizado, Cerrado...). Solo un humano deberia cerrar tareas desde Jira.
-- **only-own-issues** (activa por defecto): No permite transicionar, asignar ni editar issues de otros usuarios. Solo consultar y comentar.
+- **no-close-issues** (active by default): Blocks moving issues to final statuses (Done, Closed, Resolved, etc.). Only a human should close tasks from Jira directly.
+- **only-own-issues** (active by default): Prevents transitioning, assigning, or editing issues assigned to other users. Only viewing and commenting are allowed.
 </details>
 
 ### Git (7 tools)
 
-| Tool | Descripcion | Confirmacion |
+| Tool | Description | Confirmation |
 |------|------------|:---:|
-| `df_branch` | Crear branch (`feat/` o `fix/`) desde la base | Si |
-| `df_find_branch` | Buscar branch por issue key | — |
-| `df_checkout` | Cambiar de rama (con guard) | — |
-| `df_pull` | Pull de la rama actual | — |
-| `df_push` | Push de la rama actual | Si |
-| `df_merge` | Merge de una rama en la actual | Si |
-| `df_pr` | Crear PR (GitHub) o MR (GitLab) | — |
+| `df_branch` | Create branch (`feat/` or `fix/`) from base | Yes |
+| `df_find_branch` | Search branch by issue key | — |
+| `df_checkout` | Switch branch (with guard) | — |
+| `df_pull` | Pull current branch from remote | — |
+| `df_push` | Push current branch to remote | Yes |
+| `df_merge` | Merge a branch into the current one | Yes |
+| `df_pr` | Create PR (GitHub) or MR (GitLab) | — |
+
+> [!IMPORTANT]
+> `df_branch`, `df_checkout`, and `df_push` verify the working directory state before executing. They block if there are **uncommitted files** or **unpushed commits**, listing exactly what needs to be resolved. This prevents accidental work loss.
 
 <details>
-<summary>Guards de seguridad</summary>
+<summary>Rules that apply to Git</summary>
 
-`df_branch`, `df_checkout` y `df_push` verifican el estado del working directory:
-
-- **Archivos sin commitear** → Bloquea y lista los archivos
-- **Commits sin pushear** → Bloquea y lista los commits
-
-El usuario debe resolver pendientes antes de continuar. Esto previene perdida de trabajo.
-</details>
-
-<details>
-<summary>Reglas que aplican a Git</summary>
-
-- **no-merge-to-base** (activa por defecto): Bloquea push y merge directo a la rama base (main/master). Obliga a usar PR/MR.
-- **no-merge-from-dev** (activa por defecto): Bloquea mergear ramas de desarrollo (dev, develop, int, integration, development) hacia otras ramas. Estas ramas solo reciben merges.
+- **no-merge-to-base** (active by default): Blocks direct push and merge to the base branch (main/master). Forces using PR/MR.
+- **no-merge-from-dev** (active by default): Blocks merging development branches (dev, develop, int, integration, development) into other branches. These branches only receive merges, they are never merged out.
 </details>
 
 ### Flows (5 tools)
 
-| Tool | Descripcion |
+| Tool | Description |
 |------|------------|
-| `df_flow_create` | Crear un flow personalizado |
-| `df_flow_list` | Listar todos los flows |
-| `df_flow_get` | Ver detalle de un flow |
-| `df_flow_update` | Modificar un flow existente |
-| `df_flow_delete` | Eliminar un flow (protege `start-task`) |
+| `df_flow_create` | Create a custom flow |
+| `df_flow_list` | List all flows |
+| `df_flow_get` | View flow details |
+| `df_flow_update` | Modify an existing flow |
+| `df_flow_delete` | Delete a flow (protects `start-task`) |
 
-### Reglas (9 tools)
+### Rules (9 tools)
 
-| Tool | Descripcion | Nivel |
+| Tool | Description | Level |
 |------|------------|-------|
-| `df_rule_create` | Crear regla global | Global |
-| `df_rule_list` | Listar todas las reglas | Global |
-| `df_rule_get` | Detalle de una regla | Global |
-| `df_rule_update` | Modificar una regla | Global |
-| `df_rule_toggle` | Activar/desactivar regla | Global |
-| `df_rule_delete` | Eliminar una regla | Global |
-| `df_rule_project_override` | Activar/desactivar regla global para un proyecto | Proyecto |
-| `df_rule_project_add` | Crear regla exclusiva del proyecto | Proyecto |
-| `df_rule_project_remove` | Eliminar regla o override del proyecto | Proyecto |
+| `df_rule_create` | Create a global rule | Global |
+| `df_rule_list` | List all rules | Global |
+| `df_rule_get` | View rule details | Global |
+| `df_rule_update` | Modify a rule | Global |
+| `df_rule_toggle` | Enable/disable a rule | Global |
+| `df_rule_delete` | Delete a rule | Global |
+| `df_rule_project_override` | Enable/disable a global rule for a project | Project |
+| `df_rule_project_add` | Create a project-only rule | Project |
+| `df_rule_project_remove` | Remove a project rule or override | Project |
 
 ---
 
 ## Flows
 
-Los flows son playbooks que definen secuencias de pasos. No se ejecutan automaticamente — tu le dices a la IA cuando usarlos.
+Flows are playbooks that define step sequences. They don't run automatically — you tell the AI when to use them.
 
-### Flow por defecto: `start-task`
+### Default flow: `start-task`
 
-Se activa cuando dices algo como *"vamos con PROJ-123"*:
+Triggered when you say something like _"let's work on PROJ-123"_:
 
 ```yaml
 name: start-task
-trigger: "cuando el usuario dice 'vamos con', 'empezar tarea', 'nueva tarea' + issue ID"
+trigger: "when the user says 'let's work on', 'start task', 'new task' + issue ID"
 steps:
   - tool: df_issue
-    note: "Lee el detalle del issue y resume la tarea"
+    note: "Read issue detail and summarize the task"
   - tool: df_find_branch
-    note: "Busca si ya existe branch para este issue"
+    note: "Check if a branch already exists for this issue"
   - tool: df_branch
     confirm: true
-    note: "Solo si no se encontro branch existente"
+    note: "Only if no existing branch was found"
   - tool: df_statuses
-    note: "Obtiene transiciones para saber el ID de 'In Progress'"
+    note: "Get transitions to find the 'In Progress' transition ID"
   - tool: df_transition
     target: "In Progress"
     confirm: true
   - tool: df_assign
-    note: "Asigna el issue si no tiene asignado"
+    note: "Assign the issue if it has no assignee"
 ```
 
-### Crear un flow personalizado
+### Create a custom flow
 
-> "Crea un flow llamado 'finish-task' que haga push, cree PR y comente en Jira"
+> _"Create a flow called 'finish-task' that pushes, creates a PR, and comments on Jira"_
 
 ```yaml
 name: finish-task
-trigger: "cuando el usuario dice 'terminar tarea', 'finalizar' + issue ID"
+trigger: "when the user says 'finish task', 'wrap up' + issue ID"
 steps:
   - tool: df_push
     confirm: true
-    note: "Push de los commits pendientes"
+    note: "Push pending commits"
   - tool: df_pr
-    note: "Crear PR/MR hacia la rama base"
+    note: "Create PR/MR to base branch"
   - tool: df_comment
     confirm: true
-    note: "Comentar en el issue con el link del PR"
+    note: "Comment on the issue with the PR link"
 ```
 
-### Editar un flow
+### Edit a flow
 
-> "Modifica el flow 'start-task' para que no haga assign"
+> _"Modify the 'start-task' flow to skip the assign step"_
 
-Usa `df_flow_update` para cambiar pasos, trigger o nombre. El flow `start-task` se puede modificar pero no eliminar.
+Use `df_flow_update` to change steps, trigger, or name. The `start-task` flow can be modified but not deleted.
 
 ---
 
-## Reglas
+## Rules
 
-Las reglas son guardas configurables que bloquean o advierten sobre acciones. Hay dos niveles:
+Rules are configurable guards that block or warn about actions. There are two levels:
 
-### Reglas globales
+### Global rules
 
-Aplican a todos los proyectos. Se crean con `df_rule_create`.
+Apply to all projects. Created with `df_rule_create`.
 
-**Reglas por defecto (activas):**
+**Default rules (active):**
 
-| Regla | Ambito | Accion | Descripcion |
-|-------|--------|--------|-------------|
-| `no-merge-to-base` | git | block | No permitir push/merge directo a main/master |
-| `no-merge-from-dev` | git | block | No mergear ramas dev/int/develop hacia otras ramas |
-| `no-close-issues` | jira | block | No cerrar issues (Done, Closed, Resolved...) |
-| `only-own-issues` | jira | block | No modificar issues asignados a otros |
+| Rule | Scope | Action | Description |
+|------|-------|--------|-------------|
+| `no-merge-to-base` | git | block | Prevent direct push/merge to main/master |
+| `no-merge-from-dev` | git | block | Prevent merging dev/int/develop branches into other branches |
+| `no-close-issues` | jira | block | Prevent closing issues (Done, Closed, Resolved...) |
+| `only-own-issues` | jira | block | Prevent modifying issues assigned to others |
 
-### Reglas por proyecto
+### Project rules
 
-Cada proyecto puede:
+Each project can:
 
-1. **Sobreescribir una regla global** — activarla o desactivarla solo para ese proyecto:
-   > "Desactiva la regla no-close-issues para el proyecto staging"
+1. **Override a global rule** — enable or disable it just for that project:
+   > _"Disable the no-close-issues rule for the staging project"_
 
-   Usa `df_rule_project_override` con `enabled: false`.
+   Use `df_rule_project_override` with `enabled: false`.
 
-2. **Crear reglas propias** — solo aplican a ese proyecto:
-   > "Crea una regla en este proyecto que advierta al hacer push los viernes"
+2. **Create its own rules** — only apply to that project:
+   > _"Create a rule in this project that warns when pushing on Fridays"_
 
-   Usa `df_rule_project_add`.
+   Use `df_rule_project_add`.
 
-3. **Eliminar overrides o reglas propias**:
-   > "Elimina el override de no-close-issues en este proyecto"
+3. **Remove overrides or project rules**:
+   > _"Remove the no-close-issues override in this project"_
 
-   Usa `df_rule_project_remove`.
+   Use `df_rule_project_remove`.
 
-### Crear una regla personalizada
+### Create a custom rule
 
 ```
 df_rule_create:
   name: "no-push-friday"
-  description: "Advertir al hacer push en viernes"
+  description: "Warn when pushing on Fridays"
   scope: "git"
   action: "warn"
 ```
 
-Opciones:
-- **scope**: `git`, `jira` o `all`
-- **action**: `block` (impide la accion) o `warn` (solo avisa)
+Options:
+- **scope**: `git`, `jira`, or `all`
+- **action**: `block` (prevents the action) or `warn` (advisory only)
 
-### Resolucion de reglas
-
-Cuando una herramienta consulta reglas activas:
-
-1. Se cargan las **reglas globales**
-2. Se aplican los **overrides del proyecto** (proyecto gana)
-3. Se agregan las **reglas propias del proyecto**
-4. Se filtran por **scope** y **estado** (enabled)
+> [!NOTE]
+> **Rule resolution order:** Global rules are loaded first, then project overrides are applied (project wins), then project-specific rules are added. Finally, rules are filtered by scope and enabled state.
 
 ---
 
-## Almacenamiento
+## Storage
 
-Todos los datos se guardan en `~/.dfm/`:
+All data is stored in `~/.dfm/`:
 
 ```
 ~/.dfm/
-├── projects/          # Configuraciones de proyecto (.json)
-│   ├── mi-proyecto.json
-│   └── otro-proyecto.json
-├── flows/             # Definiciones de flows (.yaml)
+├── projects/          # Project configurations (.json)
+│   ├── my-project.json
+│   └── other-project.json
+├── flows/             # Flow definitions (.yaml)
 │   └── start-task.yaml
-├── rules/             # Reglas globales (.json)
+├── rules/             # Global rules (.json)
 │   ├── no-merge-to-base.json
 │   ├── no-merge-from-dev.json
 │   ├── no-close-issues.json
 │   └── only-own-issues.json
-├── active-project     # Proyecto activo (texto plano)
-└── config.json        # Configuracion del servidor
+├── active-project     # Active project (plain text)
+└── config.json        # Server configuration
 ```
 
-- **Proyectos**: JSON con credenciales, paths, overrides de reglas y reglas propias
-- **Flows**: YAML editables con pasos y triggers
-- **Reglas**: JSON con nombre, scope, accion y estado
-- **Permisos**: Los archivos de proyecto se crean con permisos `600` (solo tu usuario)
+- **Projects**: JSON with credentials, paths, rule overrides, and project-specific rules
+- **Flows**: Editable YAML with steps and triggers
+- **Rules**: JSON with name, scope, action, and state
+- **Permissions**: Project files are created with `600` permissions (owner-only)
 
-### Resolucion de proyecto
-
-Cuando ejecutas una herramienta, devflow-mcp determina el proyecto activo:
-
-1. **Por directorio**: Compara tu `cwd` con los `paths` de cada proyecto
-2. **Fallback**: Usa el proyecto marcado como activo con `df_project_switch`
-3. **Error**: Si no hay match, pide configurar con `df_project_setup`
+> [!TIP]
+> **Project resolution:** When you run a tool, devflow-mcp matches your current working directory against each project's `paths`. If no match is found, it falls back to the project set via `df_project_switch`. If neither works, it asks you to configure with `df_project_setup`.
 
 ---
 
-## Arquitectura
+## Compatibility
+
+### Jira
+
+| Type | API | Authentication |
+|------|-----|----------------|
+| Jira Cloud | REST API v3 | Email + API Token (Basic) |
+| Jira Server / Data Center | REST API v2 | Personal Access Token (Bearer) |
+
+Auto-detection via `/rest/api/2/serverInfo` — you don't need to know which version you're using.
+
+### Git
+
+| Provider | Support |
+|----------|---------|
+| GitHub (cloud) | REST API v3 |
+| GitHub Enterprise | REST API v3 (custom URL) |
+| GitLab (cloud) | REST API v4 |
+| GitLab self-hosted | REST API v4 (custom URL) |
+
+Auto-detection by parsing the repository's remote URL.
+
+---
+
+## Architecture
 
 ```
 src/
@@ -504,58 +507,10 @@ src/
     └── rule.ts           # 9 tools: CRUD global + 3 project-level
 ```
 
-**Stack**: TypeScript · MCP SDK · Zod · YAML · tsup
+**Stack**: TypeScript &middot; MCP SDK &middot; Zod &middot; YAML &middot; tsup
 
-**Tests**: 4 suites · 51 tests (Vitest + InMemoryTransport)
-
----
-
-## Compatibilidad
-
-### Jira
-
-| Tipo | API | Autenticacion |
-|------|-----|---------------|
-| Jira Cloud | REST API v3 | Email + API Token (Basic) |
-| Jira Server / Data Center | REST API v2 | Personal Access Token (Bearer) |
-
-Auto-deteccion via `/rest/api/2/serverInfo` — no necesitas saber que version usas.
-
-### Git
-
-| Proveedor | Soporte |
-|-----------|---------|
-| GitHub (cloud) | REST API v3 |
-| GitHub Enterprise | REST API v3 (custom URL) |
-| GitLab (cloud) | REST API v4 |
-| GitLab self-hosted | REST API v4 (custom URL) |
-
-Auto-deteccion del proveedor al parsear el remote URL del repositorio.
+**Tests**: 4 suites &middot; 51 tests (Vitest + InMemoryTransport)
 
 ---
 
-## Contribuir
-
-```bash
-git clone https://github.com/cocaxcode/devflow-mcp.git
-cd devflow-mcp
-npm install
-npm run build
-npm test
-```
-
-| Comando | Descripcion |
-|---------|------------|
-| `npm run build` | Compilar con tsup |
-| `npm run dev` | Build en modo watch |
-| `npm test` | Ejecutar tests (Vitest) |
-| `npm run test:watch` | Tests en modo watch |
-| `npm run typecheck` | Verificar tipos |
-| `npm run format` | Formatear con Prettier |
-| `npm run inspector` | MCP Inspector |
-
----
-
-## Licencia
-
-[MIT](./LICENSE) — hecho por [cocaxcode](https://github.com/cocaxcode)
+[MIT](./LICENSE) &middot; Built by [cocaxcode](https://github.com/cocaxcode)
