@@ -37,9 +37,9 @@
 
 ## Overview
 
-devflow-mcp is an MCP server that connects Jira (Cloud + Server) with GitHub/GitLab (cloud + self-hosted) through 32 tools your AI assistant can call directly. It auto-detects your Jira version and git provider, enforces configurable safety rules, and lets you define custom YAML flow playbooks for repeatable workflows.
+The most complete MCP server for developer workflow automation. 32 tools that connect Jira (Cloud + Server) with GitHub/GitLab (cloud + self-hosted) — so your AI assistant can manage issues, branches, PRs, and deployments without you ever opening a browser tab.
 
-No context switching. No browser tabs. Just tell your assistant what you need.
+It auto-detects your Jira version and git provider, enforces configurable safety rules, and lets you define custom YAML flow playbooks for repeatable workflows. Projects are configured once and remembered — each with its own Jira instance, git provider, branch conventions, and credentials. Switch between projects mid-conversation. **All credentials stay local in `~/.dfm/` — nothing is synced, nothing is tracked, nothing leaves your machine.**
 
 ---
 
@@ -379,12 +379,12 @@ df_rule_create:
 
 ## Storage
 
-All data lives in `~/.dfm/`:
+Everything lives in `~/.dfm/` — your home directory, never inside any git repository. Jira tokens, GitHub PATs, GitLab tokens — all stored locally with `600` permissions (owner-only read/write). Nothing gets committed, nothing gets pushed, nothing leaves your machine.
 
 ```
 ~/.dfm/
-├── projects/              # Project configs (.json)
-│   ├── my-project.json
+├── projects/              # Project configs (.json) — credentials included
+│   ├── my-project.json    # Jira URL, token, GitHub PAT, branch rules
 │   └── other-project.json
 ├── flows/                 # Flow definitions (.yaml)
 │   └── start-task.yaml
@@ -397,9 +397,7 @@ All data lives in `~/.dfm/`:
 └── config.json            # Server configuration
 ```
 
-Project files are created with `600` permissions (owner-only read/write).
-
-> **Tip:** **Project resolution:** devflow-mcp matches your current working directory against each project's `paths`. If no match, it falls back to the project set via `df_project_switch`. If neither works, it prompts you to configure with `df_project_setup`.
+**Project resolution works automatically:** devflow-mcp matches your current working directory against each project's `paths`. If no match, it falls back to the project set via `df_project_switch`. If neither works, it prompts you to configure with `df_project_setup`. This means you can work across multiple projects with different Jira instances and git providers — the right credentials are always selected based on where you are.
 
 ---
 
