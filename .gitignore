@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+.devflow-mcp/
+*.tgz
+.atl/
+.idea/
+.claude/
+.env
