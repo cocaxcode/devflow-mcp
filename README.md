@@ -131,7 +131,7 @@ Confirm? (confirm: true to execute)
 
 ```bash
 # Global — available across all your projects
-claude mcp add devflow --scope user -- npx -y @cocaxcode/devflow-mcp
+claude mcp add --scope user devflow -- npx -y @cocaxcode/devflow-mcp
 
 # Per-project
 claude mcp add devflow -- npx -y @cocaxcode/devflow-mcp
@@ -255,8 +255,7 @@ Auto-detects:
 | `df_merge` | Merge a branch into the current one | Yes |
 | `df_pr` | Create PR (GitHub) or MR (GitLab) | -- |
 
-> [!IMPORTANT]
-> `df_branch`, `df_checkout`, and `df_push` verify the working directory before executing. They **block if there are uncommitted files or unpushed commits**, listing exactly what needs attention. This prevents accidental work loss.
+> **Important:** `df_branch`, `df_checkout`, and `df_push` verify the working directory before executing. They **block if there are uncommitted files or unpushed commits**, listing exactly what needs attention. This prevents accidental work loss.
 
 ### Flows (5)
 
@@ -374,8 +373,7 @@ df_rule_create:
   action: "warn"     # block | warn
 ```
 
-> [!NOTE]
-> **Rule resolution order:** Global rules load first, then project overrides are applied (project wins), then project-specific rules are added. Rules are filtered by scope and enabled state before evaluation.
+> **Note:** **Rule resolution order:** Global rules load first, then project overrides are applied (project wins), then project-specific rules are added. Rules are filtered by scope and enabled state before evaluation.
 
 ---
 
@@ -401,8 +399,7 @@ All data lives in `~/.dfm/`:
 
 Project files are created with `600` permissions (owner-only read/write).
 
-> [!TIP]
-> **Project resolution:** devflow-mcp matches your current working directory against each project's `paths`. If no match, it falls back to the project set via `df_project_switch`. If neither works, it prompts you to configure with `df_project_setup`.
+> **Tip:** **Project resolution:** devflow-mcp matches your current working directory against each project's `paths`. If no match, it falls back to the project set via `df_project_switch`. If neither works, it prompts you to configure with `df_project_setup`.
 
 ---
 
