@@ -1,6 +1,6 @@
 {
   "name": "@cocaxcode/devflow-mcp",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "mcpName": "io.github.cocaxcode/devflow-mcp",
   "description": "MCP server that connects Jira (Cloud + Server) with GitHub/GitLab to automate your dev workflow. Branch creation, issue transitions, PR/MR generation, and custom flow playbooks — all from your AI assistant.",
   "type": "module",
