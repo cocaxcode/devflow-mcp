@@ -1,8 +1,8 @@
 <p align="center">
   <h1 align="center">@cocaxcode/devflow-mcp</h1>
   <p align="center">
-    <strong>Connect Jira with GitHub/GitLab from your AI assistant.</strong><br/>
-    32 tools &middot; Jira Cloud + Server &middot; GitHub + GitLab &middot; Custom flows &middot; Configurable rules
+    <strong>Your Jira + GitHub/GitLab workflow, handled by your AI assistant.</strong><br/>
+    One MCP server. 32 tools. Say what you need, it gets done.
   </p>
 </p>
 
@@ -22,9 +22,9 @@
 </p>
 
 <p align="center">
-  <a href="#the-problem">The Problem</a> &middot;
-  <a href="#installation">Installation</a> &middot;
+  <a href="#overview">Overview</a> &middot;
   <a href="#just-talk-to-it">Just Talk to It</a> &middot;
+  <a href="#installation">Installation</a> &middot;
   <a href="#tools">Tools</a> &middot;
   <a href="#flows">Flows</a> &middot;
   <a href="#rules">Rules</a> &middot;
@@ -35,26 +35,93 @@
 
 ---
 
-## The Problem
+## Overview
 
-You work with Jira, GitHub/GitLab, and the terminal. Every time you start a task:
+devflow-mcp is an MCP server that connects Jira (Cloud + Server) with GitHub/GitLab (cloud + self-hosted) through 32 tools your AI assistant can call directly. It auto-detects your Jira version and git provider, enforces configurable safety rules, and lets you define custom YAML flow playbooks for repeatable workflows.
 
-1. Open Jira, find the issue, read the details
-2. Go to the terminal, checkout main, pull, create a branch
-3. Back to Jira, move the issue to "In Progress"
-4. When done, push, create PR, back to Jira again...
+No context switching. No browser tabs. Just tell your assistant what you need.
 
-**devflow-mcp** gives you all of this as MCP tools your AI assistant (Claude Code, Cursor, Windsurf, etc.) can use directly. Each tool works independently — the AI orchestrates, the MCP executes.
+---
 
-| Feature | devflow-mcp |
-|---------|------------|
-| Jira Cloud + Server | Auto-detects version (v2/v3) |
-| GitHub + GitLab | Cloud and self-hosted |
-| Custom flows | Editable YAML playbooks |
-| Configurable rules | Global + per-project overrides |
-| Multi-project | Each project with its own connection |
-| Safety guards | Blocks if there are uncommitted/unpushed changes |
-| Explicit confirmation | Push, merge, branch, transitions |
+## Just Talk to It
+
+You don't memorize tool names. You talk naturally and the assistant picks the right tools.
+
+**"Let's work on PROJ-123"**
+
+```
+> Reading PROJ-123...
+  Title: Add OAuth login
+  Status: To Do | Priority: High
+
+> Branch feat/PROJ-123 not found. Creating...
+  branch: feat/PROJ-123-add-oauth-login
+  base: main
+  Confirm? (confirm: true to execute)
+
+> Moved PROJ-123 → In Progress
+> Assigned to you
+```
+
+**"Show me my tasks for the ACME project"**
+
+```
+ACME-45  Fix OAuth login             In Progress  High
+ACME-52  Dashboard refactor          To Do        Medium
+ACME-61  Update dependencies         To Do        Low
+```
+
+**"Push my changes"**
+
+```
+Preview:
+  branch: feat/PROJ-123-add-oauth-login
+  pending commits:
+    - a1b2c3d feat: add login component
+    - d4e5f6g feat: add auth service
+
+Confirm? (confirm: true to execute)
+```
+
+**"Merge main into my current branch"**
+
+```
+Conflict detected:
+  - src/auth/login.ts
+  - src/config/routes.ts
+
+Resolve the files and commit to complete the merge.
+```
+
+**"Create a PR titled 'feat: add OAuth login'"**
+
+```
+PR created:
+  url: https://github.com/org/repo/pull/42
+  title: feat: add OAuth login
+  provider: github
+```
+
+**"Comment on PROJ-123 that the PR is ready for review"**
+
+```
+Preview:
+  issue: PROJ-123
+  comment: "PR ready for review: https://github.com/org/repo/pull/42"
+
+Confirm? (confirm: true to publish)
+```
+
+**"Create a fix branch for PROJ-456 with description fix-oauth-redirect"**
+
+```
+Preview:
+  branch: fix/PROJ-456-fix-oauth-redirect
+  base: main
+  actions: checkout main → pull → create branch
+
+Confirm? (confirm: true to execute)
+```
 
 ---
 
@@ -63,10 +130,10 @@ You work with Jira, GitHub/GitLab, and the terminal. Every time you start a task
 ### Claude Code (recommended)
 
 ```bash
-# Global installation (available across all your projects)
+# Global — available across all your projects
 claude mcp add devflow --scope user -- npx -y @cocaxcode/devflow-mcp
 
-# Or per-project installation
+# Per-project
 claude mcp add devflow -- npx -y @cocaxcode/devflow-mcp
 ```
 
@@ -131,100 +198,14 @@ claude mcp add devflow -- npx -y @cocaxcode/devflow-mcp
 
 ---
 
-## Just Talk to It
-
-You don't need to memorize tool names. Talk to your AI assistant naturally:
-
-### Start a task
-
-> _"Let's work on PROJ-123"_
-
-The AI reads the issue, summarizes the task, checks if a branch already exists, creates one if not, moves the issue to "In Progress", and assigns it — all following the `start-task` flow.
-
-### List your issues
-
-> _"Show me my tasks for the ACME project"_
-
-```
-ACME-45  Fix OAuth login             In Progress  High
-ACME-52  Dashboard refactor          To Do        Medium
-ACME-61  Update dependencies         To Do        Low
-```
-
-### Create a branch
-
-> _"Create a fix branch for PROJ-456 with description fix-oauth-redirect"_
-
-```
-Preview:
-  branch: fix/PROJ-456-fix-oauth-redirect
-  base: main
-  actions: checkout main → pull → create branch
-
-Confirm? (confirm: true to execute)
-```
-
-### Push with safety
-
-> _"Push my changes"_
-
-```
-Preview:
-  branch: feat/PROJ-123-add-login
-  pending commits:
-    - a1b2c3d feat: add login component
-    - d4e5f6g feat: add auth service
-
-Confirm? (confirm: true to execute)
-```
-
-### Merge with conflict detection
-
-> _"Merge main into my current branch"_
-
-If there are conflicts, it tells you exactly which files:
-
-```
-Conflict detected:
-  - src/auth/login.ts
-  - src/config/routes.ts
-
-Resolve the files and commit to complete the merge.
-```
-
-### Create a PR
-
-> _"Create a PR titled 'feat: add OAuth login'"_
-
-```
-PR created:
-  url: https://github.com/org/repo/pull/42
-  title: feat: add OAuth login
-  provider: github
-```
-
-### Comment on Jira
-
-> _"Comment on PROJ-123 that the PR is ready for review"_
-
-```
-Preview:
-  issue: PROJ-123
-  comment: "PR ready for review: https://github.com/org/repo/pull/42"
-
-Confirm? (confirm: true to publish)
-```
-
----
-
 ## Tools
 
-32 tools organized in 5 categories:
+32 tools organized in 5 categories.
 
-### Projects (5 tools)
+### Projects (5)
 
 | Tool | Description |
-|------|------------|
+|------|-------------|
 | `df_project_setup` | Configure a new project (Jira + Git, auto-detects everything) |
 | `df_project_update` | Modify project configuration |
 | `df_project_list` | List all configured projects |
@@ -251,60 +232,46 @@ Auto-detects:
 ```
 </details>
 
-### Jira (6 tools)
+### Jira (6)
 
 | Tool | Description | Confirmation |
-|------|------------|:---:|
-| `df_issues` | List my assigned issues (filters by project) | — |
-| `df_issue` | Full issue detail | — |
-| `df_statuses` | Available transitions for an issue | — |
+|------|-------------|:---:|
+| `df_issues` | List my assigned issues (filters by project) | -- |
+| `df_issue` | Full issue detail | -- |
+| `df_statuses` | Available transitions for an issue | -- |
 | `df_transition` | Move issue to another status | Yes |
-| `df_assign` | Assign issue to current user | — |
+| `df_assign` | Assign issue to current user | -- |
 | `df_comment` | Comment on an issue | Yes |
 
-<details>
-<summary>Rules that apply to Jira</summary>
-
-- **no-close-issues** (active by default): Blocks moving issues to final statuses (Done, Closed, Resolved, etc.). Only a human should close tasks from Jira directly.
-- **only-own-issues** (active by default): Prevents transitioning, assigning, or editing issues assigned to other users. Only viewing and commenting are allowed.
-</details>
-
-### Git (7 tools)
+### Git (7)
 
 | Tool | Description | Confirmation |
-|------|------------|:---:|
+|------|-------------|:---:|
 | `df_branch` | Create branch (`feat/` or `fix/`) from base | Yes |
-| `df_find_branch` | Search branch by issue key | — |
-| `df_checkout` | Switch branch (with guard) | — |
-| `df_pull` | Pull current branch from remote | — |
+| `df_find_branch` | Search branch by issue key | -- |
+| `df_checkout` | Switch branch (with safety guard) | -- |
+| `df_pull` | Pull current branch from remote | -- |
 | `df_push` | Push current branch to remote | Yes |
 | `df_merge` | Merge a branch into the current one | Yes |
-| `df_pr` | Create PR (GitHub) or MR (GitLab) | — |
+| `df_pr` | Create PR (GitHub) or MR (GitLab) | -- |
 
 > [!IMPORTANT]
-> `df_branch`, `df_checkout`, and `df_push` verify the working directory state before executing. They block if there are **uncommitted files** or **unpushed commits**, listing exactly what needs to be resolved. This prevents accidental work loss.
+> `df_branch`, `df_checkout`, and `df_push` verify the working directory before executing. They **block if there are uncommitted files or unpushed commits**, listing exactly what needs attention. This prevents accidental work loss.
 
-<details>
-<summary>Rules that apply to Git</summary>
-
-- **no-merge-to-base** (active by default): Blocks direct push and merge to the base branch (main/master). Forces using PR/MR.
-- **no-merge-from-dev** (active by default): Blocks merging development branches (dev, develop, int, integration, development) into other branches. These branches only receive merges, they are never merged out.
-</details>
-
-### Flows (5 tools)
+### Flows (5)
 
 | Tool | Description |
-|------|------------|
+|------|-------------|
 | `df_flow_create` | Create a custom flow |
 | `df_flow_list` | List all flows |
 | `df_flow_get` | View flow details |
 | `df_flow_update` | Modify an existing flow |
 | `df_flow_delete` | Delete a flow (protects `start-task`) |
 
-### Rules (9 tools)
+### Rules (9)
 
 | Tool | Description | Level |
-|------|------------|-------|
+|------|-------------|-------|
 | `df_rule_create` | Create a global rule | Global |
 | `df_rule_list` | List all rules | Global |
 | `df_rule_get` | View rule details | Global |
@@ -319,9 +286,9 @@ Auto-detects:
 
 ## Flows
 
-Flows are playbooks that define step sequences. They don't run automatically — you tell the AI when to use them.
+Flows are YAML playbooks that define step sequences. They don't run automatically -- you tell the assistant when to use them.
 
-### Default flow: `start-task`
+### Default: `start-task`
 
 Triggered when you say something like _"let's work on PROJ-123"_:
 
@@ -345,7 +312,9 @@ steps:
     note: "Assign the issue if it has no assignee"
 ```
 
-### Create a custom flow
+### Custom flows
+
+Create your own by asking naturally:
 
 > _"Create a flow called 'finish-task' that pushes, creates a PR, and comments on Jira"_
 
@@ -363,96 +332,77 @@ steps:
     note: "Comment on the issue with the PR link"
 ```
 
-### Edit a flow
-
-> _"Modify the 'start-task' flow to skip the assign step"_
-
-Use `df_flow_update` to change steps, trigger, or name. The `start-task` flow can be modified but not deleted.
+The `start-task` flow can be modified but not deleted. Use `df_flow_update` to change any flow's steps, trigger, or name.
 
 ---
 
 ## Rules
 
-Rules are configurable guards that block or warn about actions. There are two levels:
+Rules are configurable guards that block or warn about actions. Two levels: global and per-project.
 
-### Global rules
+### Default rules
 
-Apply to all projects. Created with `df_rule_create`.
-
-**Default rules (active):**
-
-| Rule | Scope | Action | Description |
+| Rule | Scope | Action | What it does |
 |------|-------|--------|-------------|
 | `no-merge-to-base` | git | block | Prevent direct push/merge to main/master |
-| `no-merge-from-dev` | git | block | Prevent merging dev/int/develop branches into other branches |
+| `no-merge-from-dev` | git | block | Prevent merging dev/develop/int branches out |
 | `no-close-issues` | jira | block | Prevent closing issues (Done, Closed, Resolved...) |
 | `only-own-issues` | jira | block | Prevent modifying issues assigned to others |
 
-### Project rules
+### Project overrides
 
-Each project can:
+Each project can override global rules or define its own:
 
-1. **Override a global rule** — enable or disable it just for that project:
-   > _"Disable the no-close-issues rule for the staging project"_
+```
+# Disable a global rule for one project
+df_rule_project_override: name="no-close-issues", enabled=false
 
-   Use `df_rule_project_override` with `enabled: false`.
+# Add a project-only rule
+df_rule_project_add: name="no-push-friday", scope="git", action="warn"
 
-2. **Create its own rules** — only apply to that project:
-   > _"Create a rule in this project that warns when pushing on Fridays"_
+# Remove an override or project rule
+df_rule_project_remove: name="no-close-issues"
+```
 
-   Use `df_rule_project_add`.
-
-3. **Remove overrides or project rules**:
-   > _"Remove the no-close-issues override in this project"_
-
-   Use `df_rule_project_remove`.
-
-### Create a custom rule
+### Custom rules
 
 ```
 df_rule_create:
   name: "no-push-friday"
   description: "Warn when pushing on Fridays"
-  scope: "git"
-  action: "warn"
+  scope: "git"       # git | jira | all
+  action: "warn"     # block | warn
 ```
 
-Options:
-- **scope**: `git`, `jira`, or `all`
-- **action**: `block` (prevents the action) or `warn` (advisory only)
-
 > [!NOTE]
-> **Rule resolution order:** Global rules are loaded first, then project overrides are applied (project wins), then project-specific rules are added. Finally, rules are filtered by scope and enabled state.
+> **Rule resolution order:** Global rules load first, then project overrides are applied (project wins), then project-specific rules are added. Rules are filtered by scope and enabled state before evaluation.
 
 ---
 
 ## Storage
 
-All data is stored in `~/.dfm/`:
+All data lives in `~/.dfm/`:
 
 ```
 ~/.dfm/
-├── projects/          # Project configurations (.json)
+├── projects/              # Project configs (.json)
 │   ├── my-project.json
 │   └── other-project.json
-├── flows/             # Flow definitions (.yaml)
+├── flows/                 # Flow definitions (.yaml)
 │   └── start-task.yaml
-├── rules/             # Global rules (.json)
+├── rules/                 # Global rules (.json)
 │   ├── no-merge-to-base.json
 │   ├── no-merge-from-dev.json
 │   ├── no-close-issues.json
 │   └── only-own-issues.json
-├── active-project     # Active project (plain text)
-└── config.json        # Server configuration
+├── active-project         # Current active project (plain text)
+└── config.json            # Server configuration
 ```
 
-- **Projects**: JSON with credentials, paths, rule overrides, and project-specific rules
-- **Flows**: Editable YAML with steps and triggers
-- **Rules**: JSON with name, scope, action, and state
-- **Permissions**: Project files are created with `600` permissions (owner-only)
+Project files are created with `600` permissions (owner-only read/write).
 
 > [!TIP]
-> **Project resolution:** When you run a tool, devflow-mcp matches your current working directory against each project's `paths`. If no match is found, it falls back to the project set via `df_project_switch`. If neither works, it asks you to configure with `df_project_setup`.
+> **Project resolution:** devflow-mcp matches your current working directory against each project's `paths`. If no match, it falls back to the project set via `df_project_switch`. If neither works, it prompts you to configure with `df_project_setup`.
 
 ---
 
@@ -465,12 +415,12 @@ All data is stored in `~/.dfm/`:
 | Jira Cloud | REST API v3 | Email + API Token (Basic) |
 | Jira Server / Data Center | REST API v2 | Personal Access Token (Bearer) |
 
-Auto-detection via `/rest/api/2/serverInfo` — you don't need to know which version you're using.
+Auto-detection via `/rest/api/2/serverInfo` -- no manual configuration needed.
 
-### Git
+### Git providers
 
-| Provider | Support |
-|----------|---------|
+| Provider | API |
+|----------|-----|
 | GitHub (cloud) | REST API v3 |
 | GitHub Enterprise | REST API v3 (custom URL) |
 | GitLab (cloud) | REST API v4 |
@@ -507,9 +457,9 @@ src/
     └── rule.ts           # 9 tools: CRUD global + 3 project-level
 ```
 
-**Stack**: TypeScript &middot; MCP SDK &middot; Zod &middot; YAML &middot; tsup
+**Stack:** TypeScript &middot; MCP SDK &middot; Zod &middot; YAML &middot; tsup
 
-**Tests**: 4 suites &middot; 51 tests (Vitest + InMemoryTransport)
+**Tests:** 4 suites &middot; 51 tests (Vitest + InMemoryTransport)
 
 ---
 
