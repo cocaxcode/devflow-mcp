@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.cocaxcode/devflow-mcp",
+  "description": "MCP server that connects Jira (Cloud + Server) with GitHub/GitLab. 32 tools: branches, issues, PRs, flows, rules.",
+  "repository": {
+    "url": "https://github.com/cocaxcode/devflow-mcp",
+    "source": "github"
+  },
+  "version": "0.1.6",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@cocaxcode/devflow-mcp",
+      "version": "0.1.6",
+      "runtime": "node",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

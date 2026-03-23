@@ -24,6 +24,7 @@ export function createServer(storageDir?: string): McpServer {
   const server = new McpServer({
     name: 'devflow-mcp',
     version: VERSION,
+  }, {
     instructions: INSTRUCTIONS,
   })
 
