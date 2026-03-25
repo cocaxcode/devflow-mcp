@@ -1,0 +1,13 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      devflowDir:
+        type: string
+        description: Directory for storing devflow config and projects.
+  commandFunction:
+    |-
+      (config) => ({ command: 'npx', args: ['-y', '@cocaxcode/devflow-mcp'], env: config.devflowDir ? { DEVFLOW_DIR: config.devflowDir } : {} })
