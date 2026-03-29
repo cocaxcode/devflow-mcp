@@ -25,6 +25,7 @@
   <a href="#overview">Overview</a> &middot;
   <a href="#just-talk-to-it">Just Talk to It</a> &middot;
   <a href="#installation">Installation</a> &middot;
+  <a href="#project-scopes">Project Scopes</a> &middot;
   <a href="#tools">Tools</a> &middot;
   <a href="#flows">Flows</a> &middot;
   <a href="#rules">Rules</a> &middot;
@@ -39,13 +40,46 @@
 
 The most complete MCP server for developer workflow automation. 32 tools that connect Jira (Cloud + Server) with GitHub/GitLab (cloud + self-hosted) — so your AI assistant can manage issues, branches, PRs, and deployments without you ever opening a browser tab.
 
-It auto-detects your Jira version and git provider, enforces configurable safety rules, and lets you define custom YAML flow playbooks for repeatable workflows. Projects are configured once and remembered — each with its own Jira instance, git provider, branch conventions, and credentials. Switch between projects mid-conversation. **All credentials stay local in `~/.dfm/` — nothing is synced, nothing is tracked, nothing leaves your machine.**
+It auto-detects your Jira version and git provider, enforces configurable safety rules, and lets you define custom YAML flow playbooks for repeatable workflows. Projects are configured once and remembered — each with its own Jira instance, git provider, branch conventions, credentials, and directory scopes. The project that matches your current directory activates automatically (default), or you can switch to another for the session (active). **All credentials stay local in `~/.devflow-mcp/` — nothing is synced, nothing is tracked, nothing leaves your machine.**
 
 ---
 
 ## Just Talk to It
 
 You don't memorize tool names. You talk naturally and the assistant picks the right tools.
+
+**"Set up a project for my Jira + GitHub"**
+
+```
+> df_project_setup with:
+    name: "my-backend"
+    jiraUrl: "https://myteam.atlassian.net"
+    jiraEmail: "dev@myteam.com"
+    jiraToken: "ATATT3x..."
+    jiraProjectKey: "PROJ"
+    gitToken: "ghp_..."
+
+Auto-detects:
+  - Jira Cloud (API v3)
+  - GitHub (org/my-backend)
+  - Base branch: main
+  - Scope: C:/repos/my-backend (your CWD, auto-added)
+```
+
+**"List my projects"**
+
+```
+Projects:
+  my-backend    [default] [active]   scopes: C:/repos/my-backend
+  my-frontend                        scopes: C:/repos/my-frontend
+```
+
+**"Switch to my-frontend for this session"**
+
+```
+Active project switched to: my-frontend (session only)
+Default remains: my-backend (based on your current directory)
+```
 
 **"Let's work on PROJ-123"**
 
@@ -131,10 +165,10 @@ Confirm? (confirm: true to execute)
 
 ```bash
 # Global — available across all your projects
-claude mcp add --scope user devflow -- npx -y @cocaxcode/devflow-mcp
+claude mcp add --scope user devflow -- npx -y @cocaxcode/devflow-mcp@latest
 
 # Per-project
-claude mcp add devflow -- npx -y @cocaxcode/devflow-mcp
+claude mcp add devflow -- npx -y @cocaxcode/devflow-mcp@latest
 ```
 
 ### Claude Desktop
@@ -147,7 +181,7 @@ claude mcp add devflow -- npx -y @cocaxcode/devflow-mcp
   "mcpServers": {
     "devflow": {
       "command": "npx",
-      "args": ["-y", "@cocaxcode/devflow-mcp"]
+      "args": ["-y", "@cocaxcode/devflow-mcp@latest"]
     }
   }
 }
@@ -162,7 +196,7 @@ claude mcp add devflow -- npx -y @cocaxcode/devflow-mcp
   "mcpServers": {
     "devflow": {
       "command": "npx",
-      "args": ["-y", "@cocaxcode/devflow-mcp"]
+      "args": ["-y", "@cocaxcode/devflow-mcp@latest"]
     }
   }
 }
@@ -177,7 +211,7 @@ claude mcp add devflow -- npx -y @cocaxcode/devflow-mcp
   "mcpServers": {
     "devflow": {
       "command": "npx",
-      "args": ["-y", "@cocaxcode/devflow-mcp"]
+      "args": ["-y", "@cocaxcode/devflow-mcp@latest"]
     }
   }
 }
@@ -190,11 +224,50 @@ claude mcp add devflow -- npx -y @cocaxcode/devflow-mcp
   "mcpServers": {
     "devflow": {
       "command": "npx",
-      "args": ["-y", "@cocaxcode/devflow-mcp"]
+      "args": ["-y", "@cocaxcode/devflow-mcp@latest"]
     }
   }
 }
 ```
+
+---
+
+## Project Scopes
+
+Each project has **paths** (scopes) — the directories that belong to it. A directory can only be the scope of one project.
+
+This gives you two concepts:
+
+- **Default project**: The project whose scope matches your current working directory. This is automatic and persistent — if you are inside `C:/repos/my-backend` and that directory is a scope of `my-backend`, then `my-backend` is the default. No action needed.
+
+- **Active project**: The project you are currently working with. By default it equals the default project, but you can switch it manually with `df_project_switch` for the current session. This resets to the default when you restart.
+
+`df_project_list` shows both the **default** and **active** indicators so you always know where you stand.
+
+### Practical example
+
+```
+"Set up a project called my-backend"
+  → CWD (C:/repos/my-backend) is auto-added as scope
+
+"Set up another called my-frontend"
+  → Run from C:/repos/my-frontend, that directory becomes its scope
+
+"List projects"
+  → my-backend   [default] [active]    scopes: C:/repos/my-backend
+     my-frontend                        scopes: C:/repos/my-frontend
+
+"Switch to my-frontend"
+  → Session switches. Now my-frontend is active for checking issues, etc.
+
+"List projects"
+  → my-backend   [default]             scopes: C:/repos/my-backend
+     my-frontend  [active]              scopes: C:/repos/my-frontend
+
+Close and reopen → my-backend is active again (matches CWD = default)
+```
+
+This means you can work across multiple projects with different Jira instances and git providers — the right credentials are always selected based on where you are, and you can always override for the session when needed.
 
 ---
 
@@ -208,8 +281,8 @@ claude mcp add devflow -- npx -y @cocaxcode/devflow-mcp
 |------|-------------|
 | `df_project_setup` | Configure a new project (Jira + Git, auto-detects everything) |
 | `df_project_update` | Modify project configuration |
-| `df_project_list` | List all configured projects |
-| `df_project_switch` | Switch the active project |
+| `df_project_list` | List all configured projects (shows default + active) |
+| `df_project_switch` | Switch the active project for the current session |
 | `df_project_delete` | Delete a project |
 
 <details>
@@ -218,17 +291,17 @@ claude mcp add devflow -- npx -y @cocaxcode/devflow-mcp
 ```
 df_project_setup with:
   name: "my-project"
-  jiraUrl: "https://my-company.atlassian.net"
-  jiraEmail: "dev@company.com"
+  jiraUrl: "https://myteam.atlassian.net"
+  jiraEmail: "dev@myteam.com"
   jiraToken: "ATATT3x..."
   jiraProjectKey: "PROJ"
   gitToken: "ghp_..."
-  paths: ["C:/repos/my-project"]
 
 Auto-detects:
   - Jira Cloud (API v3)
   - GitHub (org/my-project)
   - Base branch: main
+  - Scope: your CWD (auto-added)
 ```
 </details>
 
@@ -379,12 +452,12 @@ df_rule_create:
 
 ## Storage
 
-Everything lives in `~/.dfm/` — your home directory, never inside any git repository. Jira tokens, GitHub PATs, GitLab tokens — all stored locally with `600` permissions (owner-only read/write). Nothing gets committed, nothing gets pushed, nothing leaves your machine.
+Everything lives in `~/.devflow-mcp/` — your home directory, never inside any git repository. Jira tokens, GitHub PATs, GitLab tokens — all stored locally with `600` permissions (owner-only read/write). Nothing gets committed, nothing gets pushed, nothing leaves your machine.
 
 ```
-~/.dfm/
+~/.devflow-mcp/
 ├── projects/              # Project configs (.json) — credentials included
-│   ├── my-project.json    # Jira URL, token, GitHub PAT, branch rules
+│   ├── my-project.json    # Jira URL, token, GitHub PAT, branch rules, scopes
 │   └── other-project.json
 ├── flows/                 # Flow definitions (.yaml)
 │   └── start-task.yaml
@@ -397,7 +470,7 @@ Everything lives in `~/.dfm/` — your home directory, never inside any git repo
 └── config.json            # Server configuration
 ```
 
-**Project resolution works automatically:** devflow-mcp matches your current working directory against each project's `paths`. If no match, it falls back to the project set via `df_project_switch`. If neither works, it prompts you to configure with `df_project_setup`. This means you can work across multiple projects with different Jira instances and git providers — the right credentials are always selected based on where you are.
+**Project resolution works automatically:** devflow-mcp matches your current working directory against each project's `paths` (scopes). The matching project becomes the **default**. You can override it for the session with `df_project_switch`, which sets the **active** project. On restart, the active project resets to whatever the default is for your CWD. If no match is found and no active project is set, it prompts you to configure with `df_project_setup`.
 
 ---
 

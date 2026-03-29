@@ -133,10 +133,11 @@ describe('Storage', () => {
       expect(resolved.name).toBe('cwd-project')
     })
 
-    it('reject when cwd does not match any project even with active project set', async () => {
+    it('resolve active session project even when cwd does not match paths', async () => {
       await storage.saveProject(makeProject('fallback-project'))
       await storage.setActiveProject('fallback-project')
-      await expect(storage.resolveProject('/some/other/path')).rejects.toThrow('no coincide con ningún proyecto configurado')
+      const resolved = await storage.resolveProject('/some/other/path')
+      expect(resolved.name).toBe('fallback-project')
     })
 
     it('throw when no project resolvable', async () => {

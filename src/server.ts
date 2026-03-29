@@ -14,11 +14,24 @@ const INSTRUCTIONS = `devflow-mcp conecta Jira con GitHub/GitLab para automatiza
 
 Cada tool funciona de forma independiente. El usuario puede pedir flows guardados con df_flow_list y df_flow_get para ver secuencias de pasos predefinidas y pedirte que los ejecutes.
 
+PROYECTOS:
+- Cada proyecto tiene paths (scopes) — directorios fisicos que pertenecen a ese proyecto.
+- Un directorio fisico solo puede ser scope de un proyecto.
+- df_project_list muestra DEFAULT (por scope del CWD) y ACTIVE (de sesion).
+- Al reiniciar, el active vuelve al default (el del scope).
+- df_project_switch cambia el active de sesion (no persiste).
+
 COMPORTAMIENTO:
 - df_checkout y df_branch bloquean si hay cambios sin commitear/pushear. Si pasa, avisa al usuario.
 - df_transition y df_branch requieren confirm:true.
 - df_issue, df_find_branch y df_statuses solo leen datos, sin efectos secundarios.
-- El usuario puede configurar reglas (df_rule_create/list/toggle/update/delete) que bloquean o advierten sobre acciones. Consulta las reglas activas con df_rule_list cuando sea relevante.`
+- El usuario puede configurar reglas (df_rule_create/list/toggle/update/delete) que bloquean o advierten sobre acciones. Consulta las reglas activas con df_rule_list cuando sea relevante.
+
+CREDENCIALES — REGLA CRITICA:
+- NUNCA inventes ni asumas credenciales (emails, tokens, passwords, URLs de Jira).
+- Si df_project_setup o df_project_update necesitan datos que no tienes, PREGUNTA AL USUARIO.
+- No uses emails de otros contextos (memoria, archivos, variables de entorno) como credenciales de Jira.
+- Los tokens y API keys son secretos que solo el usuario conoce. Siempre pide que los proporcione.`
 
 export function createServer(storageDir?: string): McpServer {
   const server = new McpServer({

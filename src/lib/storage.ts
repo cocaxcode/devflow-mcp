@@ -14,6 +14,17 @@ function sanitizeName(name: string): string {
     .replace(/^-|-$/g, '')
 }
 
+/** Limpia el active de sesión al arrancar — cada sesión empieza con el default por scope */
+export async function clearSessionActive(): Promise<void> {
+  const baseDir = process.env.DEVFLOW_MCP_DIR ?? join(homedir(), '.devflow-mcp')
+  const activeProjectFile = join(baseDir, 'active-project')
+  try {
+    await unlink(activeProjectFile)
+  } catch {
+    // No existe, ok
+  }
+}
+
 export class Storage {
   private readonly baseDir: string
   private readonly projectsDir: string
@@ -23,7 +34,7 @@ export class Storage {
   private readonly configFile: string
 
   constructor(baseDir?: string) {
-    this.baseDir = baseDir ?? process.env.DEVFLOW_MCP_DIR ?? join(homedir(), '.dfm')
+    this.baseDir = baseDir ?? process.env.DEVFLOW_MCP_DIR ?? join(homedir(), '.devflow-mcp')
     this.projectsDir = join(this.baseDir, 'projects')
     this.flowsDir = join(this.baseDir, 'flows')
     this.rulesDir = join(this.baseDir, 'rules')
@@ -101,11 +112,17 @@ export class Storage {
     }
   }
 
+  /** Resuelve el proyecto activo: 1) active de sesión, 2) default por scope (CWD en paths) */
   async resolveProject(cwd: string): Promise<ProjectConfig> {
-    const normalizedCwd = normalize(cwd).replace(/\\/g, '/')
+    // 1. Active de sesión (active-project file)
+    const activeName = await this.getActiveProject()
+    if (activeName) {
+      const activeProject = await this.getProject(activeName)
+      if (activeProject) return activeProject
+    }
 
-    // Buscar SOLO por cwd en paths de todos los proyectos.
-    // No hay fallback a active-project: si el directorio actual no es un proyecto configurado, se rechaza.
+    // 2. Default por scope (CWD matchea paths del proyecto)
+    const normalizedCwd = normalize(cwd).replace(/\\/g, '/')
     const projects = await this.listProjects()
     for (const project of projects) {
       for (const path of project.paths) {
@@ -122,6 +139,22 @@ export class Storage {
       (projectNames ? ` Proyectos disponibles: ${projectNames}.` : '') +
       ' Navega al directorio del proyecto o usa df_project_setup para configurar uno nuevo.',
     )
+  }
+
+  /** Resuelve el proyecto default por scope (sin considerar active de sesión) */
+  resolveDefaultProject(cwd: string): Promise<ProjectConfig | null> {
+    const normalizedCwd = normalize(cwd).replace(/\\/g, '/')
+    return this.listProjects().then((projects) => {
+      for (const project of projects) {
+        for (const path of project.paths) {
+          const normalizedPath = normalize(path).replace(/\\/g, '/')
+          if (normalizedCwd === normalizedPath || normalizedCwd.startsWith(normalizedPath + '/')) {
+            return project
+          }
+        }
+      }
+      return null
+    })
   }
 
   // ── Flows ──

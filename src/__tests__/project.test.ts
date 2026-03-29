@@ -44,6 +44,6 @@ describe('Project Tools (integration)', () => {
       gitToken: 'token',
     })
     expect(result.isError).toBe(true)
-    expect(result.text).toContain('jiraEmail + jiraToken')
+    expect(result.text).toContain('Faltan datos de autenticacion')
   })
 })
