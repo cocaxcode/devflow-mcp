@@ -19,8 +19,12 @@ export class GitLabClient implements GitProviderClient {
   private readonly projectId: number
 
   constructor(token: string, baseUrl: string, projectId: number) {
+    const url = baseUrl.replace(/\/+$/, '')
+    if (!/^https:\/\//i.test(url)) {
+      throw new Error('La URL de GitLab debe usar HTTPS para proteger las credenciales.')
+    }
     this.token = token
-    this.baseUrl = baseUrl.replace(/\/+$/, '')
+    this.baseUrl = url
     this.projectId = projectId
   }
 
@@ -86,6 +90,7 @@ export class GitLabClient implements GitProviderClient {
         'PRIVATE-TOKEN': token,
         Accept: 'application/json',
       },
+      signal: AbortSignal.timeout(15_000),
     })
 
     if (!res.ok) {
@@ -109,7 +114,11 @@ export class GitLabClient implements GitProviderClient {
       Accept: 'application/json',
     }
 
-    const init: RequestInit = { method, headers }
+    const init: RequestInit = {
+      method,
+      headers,
+      signal: AbortSignal.timeout(30_000),
+    }
 
     if (body) {
       headers['Content-Type'] = 'application/json'
@@ -120,6 +129,9 @@ export class GitLabClient implements GitProviderClient {
     try {
       res = await fetch(url, init)
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'TimeoutError') {
+        throw new Error('GitLab no responde (timeout 30s)')
+      }
       throw new Error(`GitLab no accesible: ${err instanceof Error ? err.message : String(err)}`)
     }
 

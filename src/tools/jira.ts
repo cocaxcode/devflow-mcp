@@ -3,6 +3,17 @@ import { z } from 'zod'
 import type { Storage } from '../lib/storage.js'
 import { JiraClient } from '../lib/jira/client.js'
 
+/** Escapa caracteres especiales en valores JQL para prevenir inyección */
+function escapeJql(value: string): string {
+  // JQL reserved chars: + - & | ! ( ) { } [ ] ^ ~ * ? \ : "
+  return value.replace(/([+\-&|!(){}[\]^~*?\\:"])/g, '\\$1')
+}
+
+/** Valida formato de issue key (PROJECT-123) */
+function isValidIssueKey(key: string): boolean {
+  return /^[A-Z][A-Z0-9_]+-\d+$/.test(key)
+}
+
 async function checkOwnIssueRule(
   storage: Storage,
   client: JiraClient,
@@ -16,8 +27,8 @@ async function checkOwnIssueRule(
   const issue = await client.getIssue(issueKey)
   const currentUser = await client.getCurrentUser()
 
-  // Comparar por accountId/name
-  const isOwner = issue.assignee?.displayName === currentUser.displayName
+  // Comparar por accountId (unico) en vez de displayName (puede repetirse)
+  const isOwner = issue.assignee?.accountId === currentUser.accountId
 
   if (!isOwner) {
     const msg = `Regla '${rule.name}': No puedes modificar el issue ${issueKey} porque esta asignado a ${issue.assignee?.displayName ?? 'nadie'}. Solo puedes consultar o comentar issues ajenos.`
@@ -45,12 +56,14 @@ export function registerJiraTools(server: McpServer, storage: Storage): void {
         let jql = 'assignee = currentUser() AND status != Done ORDER BY updated DESC'
 
         if (projectKey) {
-          jql = `project = ${projectKey} AND ${jql}`
+          const safeKey = escapeJql(projectKey)
+          jql = `project = "${safeKey}" AND ${jql}`
         }
         if (params.status) {
+          const safeStatus = escapeJql(params.status)
           jql = jql.replace(
             'AND status != Done',
-            `AND status = "${params.status}"`,
+            `AND status = "${safeStatus}"`,
           )
         }
 
@@ -90,6 +103,9 @@ export function registerJiraTools(server: McpServer, storage: Storage): void {
     },
     async (params) => {
       try {
+        if (!isValidIssueKey(params.issueKey)) {
+          return { isError: true, content: [{ type: 'text' as const, text: `Error: Formato de issue key invalido '${params.issueKey}'. Formato esperado: PROJ-123` }] }
+        }
         const config = await storage.resolveProject(process.cwd())
         const client = new JiraClient(config)
         const issue = await client.getIssue(params.issueKey)
@@ -115,6 +131,9 @@ export function registerJiraTools(server: McpServer, storage: Storage): void {
     },
     async (params) => {
       try {
+        if (!isValidIssueKey(params.issueKey)) {
+          return { isError: true, content: [{ type: 'text' as const, text: `Error: Formato de issue key invalido '${params.issueKey}'. Formato esperado: PROJ-123` }] }
+        }
         const config = await storage.resolveProject(process.cwd())
         const client = new JiraClient(config)
         const transitions = await client.getTransitions(params.issueKey)
@@ -148,6 +167,9 @@ export function registerJiraTools(server: McpServer, storage: Storage): void {
     },
     async (params) => {
       try {
+        if (!isValidIssueKey(params.issueKey)) {
+          return { isError: true, content: [{ type: 'text' as const, text: `Error: Formato de issue key invalido '${params.issueKey}'. Formato esperado: PROJ-123` }] }
+        }
         const config = await storage.resolveProject(process.cwd())
         const client = new JiraClient(config)
 
@@ -239,6 +261,9 @@ export function registerJiraTools(server: McpServer, storage: Storage): void {
     },
     async (params) => {
       try {
+        if (!isValidIssueKey(params.issueKey)) {
+          return { isError: true, content: [{ type: 'text' as const, text: `Error: Formato de issue key invalido '${params.issueKey}'. Formato esperado: PROJ-123` }] }
+        }
         const config = await storage.resolveProject(process.cwd())
         const client = new JiraClient(config)
 
@@ -247,8 +272,8 @@ export function registerJiraTools(server: McpServer, storage: Storage): void {
         const currentUser = await client.getCurrentUser()
 
         if (issue.assignee) {
-          // Si ya es mío, todo bien
-          if (issue.assignee.displayName === currentUser.displayName) {
+          // Si ya es mío, todo bien (comparar por accountId, unico)
+          if (issue.assignee.accountId === currentUser.accountId) {
             return {
               content: [{
                 type: 'text' as const,
@@ -304,6 +329,9 @@ export function registerJiraTools(server: McpServer, storage: Storage): void {
     },
     async (params) => {
       try {
+        if (!isValidIssueKey(params.issueKey)) {
+          return { isError: true, content: [{ type: 'text' as const, text: `Error: Formato de issue key invalido '${params.issueKey}'. Formato esperado: PROJ-123` }] }
+        }
         const config = await storage.resolveProject(process.cwd())
         const client = new JiraClient(config)
 

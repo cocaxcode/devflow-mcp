@@ -20,6 +20,8 @@ export function registerProjectTools(server: McpServer, storage: Storage): void 
       jiraToken: z.string().optional().describe('API Token para Jira Cloud'),
       jiraPat: z.string().optional().describe('Personal Access Token para Jira Server'),
       gitToken: z.string().describe('Token de GitHub o GitLab'),
+      gitUrl: z.string().optional().describe('URL base del GitLab self-hosted (ej: https://gitlab.empresa.com). Si no se pasa, se extrae del remote.'),
+      gitProject: z.string().optional().describe('Path completo del proyecto en GitLab (ej: grupo/subgrupo/repo). Util cuando el remote es un fork pero se quiere vincular al proyecto principal.'),
     },
     async (params) => {
       try {
@@ -54,12 +56,26 @@ export function registerProjectTools(server: McpServer, storage: Storage): void 
         let repoId: number | undefined
         let gitProviderUrl: string | undefined
 
+        // Resolver owner/repo: gitProject override o auto-detectado del remote
+        let resolvedOwner = remote.owner
+        let resolvedRepo = remote.repo
+
+        if (params.gitProject) {
+          const parts = params.gitProject.split('/')
+          resolvedRepo = parts.pop()!
+          resolvedOwner = parts.join('/')
+        }
+
         if (remote.provider === 'gitlab') {
-          const glBaseUrl = remote.url.match(/^git@([^:]+):/)?.[1]
-            ?? remote.url.match(/^https?:\/\/([^/]+)/)?.[1]
-            ?? 'gitlab.com'
-          gitProviderUrl = `https://${glBaseUrl}`
-          repoId = await GitLabClient.getProjectId(params.gitToken, gitProviderUrl, remote.owner, remote.repo)
+          if (params.gitUrl) {
+            gitProviderUrl = params.gitUrl.replace(/\/+$/, '')
+          } else {
+            const glBaseUrl = remote.url.match(/^git@([^:]+):/)?.[1]
+              ?? remote.url.match(/^https?:\/\/([^/]+)/)?.[1]
+              ?? 'gitlab.com'
+            gitProviderUrl = `https://${glBaseUrl}`
+          }
+          repoId = await GitLabClient.getProjectId(params.gitToken, gitProviderUrl, resolvedOwner, resolvedRepo)
         }
 
         const now = new Date().toISOString()
@@ -75,8 +91,8 @@ export function registerProjectTools(server: McpServer, storage: Storage): void 
           gitAuth: { token: params.gitToken },
           baseBranch,
           paths: [process.cwd()],
-          repoOwner: remote.owner,
-          repoName: remote.repo,
+          repoOwner: resolvedOwner,
+          repoName: resolvedRepo,
           repoId,
           createdAt: now,
           updatedAt: now,
@@ -94,8 +110,8 @@ export function registerProjectTools(server: McpServer, storage: Storage): void 
               jiraApiVersion,
               gitProvider: remote.provider,
               baseBranch,
-              repoOwner: remote.owner,
-              repoName: remote.repo,
+              repoOwner: resolvedOwner,
+              repoName: resolvedRepo,
             }, null, 2),
           }],
         }
@@ -120,6 +136,8 @@ export function registerProjectTools(server: McpServer, storage: Storage): void 
       jiraToken: z.string().optional().describe('Nuevo API Token para Jira Cloud'),
       jiraPat: z.string().optional().describe('Nuevo PAT para Jira Server'),
       gitToken: z.string().optional().describe('Nuevo token de Git provider'),
+      gitUrl: z.string().optional().describe('URL base del GitLab self-hosted (ej: https://gitlab.empresa.com)'),
+      gitProject: z.string().optional().describe('Path completo del proyecto en GitLab (ej: grupo/subgrupo/repo)'),
       baseBranch: z.string().optional().describe('Rama base (main/master)'),
     },
     async (params) => {
@@ -164,6 +182,27 @@ export function registerProjectTools(server: McpServer, storage: Storage): void 
           project.gitAuth = { token: params.gitToken }
         }
 
+        if (params.gitUrl) {
+          project.gitProviderUrl = params.gitUrl.replace(/\/+$/, '')
+        }
+
+        if (params.gitProject) {
+          const parts = params.gitProject.split('/')
+          project.repoName = parts.pop()!
+          project.repoOwner = parts.join('/')
+        }
+
+        // Re-obtener project ID si cambio algo de GitLab
+        if (project.gitProvider === 'gitlab' && (params.gitUrl || params.gitProject || params.gitToken)) {
+          const baseUrl = project.gitProviderUrl ?? 'https://gitlab.com'
+          project.repoId = await GitLabClient.getProjectId(
+            project.gitAuth.token,
+            baseUrl,
+            project.repoOwner,
+            project.repoName,
+          )
+        }
+
         if (params.baseBranch) {
           project.baseBranch = params.baseBranch
         }
@@ -171,10 +210,12 @@ export function registerProjectTools(server: McpServer, storage: Storage): void 
         project.updatedAt = new Date().toISOString()
         await storage.saveProject(project)
 
+        // Respuesta sin credenciales
+        const { jiraAuth: _ja, gitAuth: _ga, ...safeProject } = project
         return {
           content: [{
             type: 'text' as const,
-            text: JSON.stringify({ message: `Proyecto '${params.name}' actualizado`, project }, null, 2),
+            text: JSON.stringify({ message: `Proyecto '${params.name}' actualizado`, project: safeProject }, null, 2),
           }],
         }
       } catch (err) {

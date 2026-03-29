@@ -13,7 +13,7 @@ export interface JiraFieldsResponse {
   description: unknown // string (Server v2) | ADF object (Cloud v3) | null
   status: { name: string; id: string }
   priority: { name: string; id: string }
-  assignee: { displayName: string; emailAddress?: string; name?: string } | null
+  assignee: { displayName: string; emailAddress?: string; name?: string; accountId?: string } | null
   reporter: { displayName: string; emailAddress?: string; name?: string }
   labels: string[]
   components: { name: string }[]

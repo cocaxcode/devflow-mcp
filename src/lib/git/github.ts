@@ -71,7 +71,11 @@ export class GitHubClient implements GitProviderClient {
       'User-Agent': 'devflow-mcp',
     }
 
-    const init: RequestInit = { method, headers }
+    const init: RequestInit = {
+      method,
+      headers,
+      signal: AbortSignal.timeout(30_000),
+    }
 
     if (body) {
       headers['Content-Type'] = 'application/json'
@@ -82,6 +86,9 @@ export class GitHubClient implements GitProviderClient {
     try {
       res = await fetch(url, init)
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'TimeoutError') {
+        throw new Error('GitHub no responde (timeout 30s)')
+      }
       throw new Error(`GitHub no accesible: ${err instanceof Error ? err.message : String(err)}`)
     }
 

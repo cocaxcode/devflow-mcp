@@ -1,7 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import type { Storage } from '../lib/storage.js'
-import type { Rule, ProjectConfig } from '../lib/types.js'
+import type { Rule } from '../lib/types.js'
 
 export function registerRuleTools(server: McpServer, storage: Storage): void {
   // ── df_rule_create ──

@@ -4,6 +4,11 @@ import type { Storage } from '../lib/storage.js'
 import { gitExec, gitExecRaw, getWorkingDirStatus, getCurrentBranch } from '../lib/git-exec.js'
 import { createGitProviderClient } from '../lib/git/factory.js'
 
+/** Resuelve el directorio de trabajo del proyecto */
+function getProjectCwd(config: { paths: string[] }): string {
+  return config.paths[0] ?? process.cwd()
+}
+
 export function registerGitTools(server: McpServer, storage: Storage): void {
   // ── df_branch ──
   server.tool(
@@ -18,9 +23,10 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
     async (params) => {
       try {
         const config = await storage.resolveProject(process.cwd())
+        const cwd = getProjectCwd(config)
 
         // Guard: verificar working directory limpio
-        const status = await getWorkingDirStatus()
+        const status = await getWorkingDirStatus(cwd)
         if (!status.clean) {
           const parts: string[] = []
           if (status.uncommittedFiles.length > 0) {
@@ -62,7 +68,7 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
 
         // Verificar que la branch no exista
         try {
-          await gitExec(['rev-parse', '--verify', branchName])
+          await gitExec(['rev-parse', '--verify', branchName], cwd)
           return {
             isError: true,
             content: [{ type: 'text' as const, text: `Error: La branch '${branchName}' ya existe.` }],
@@ -72,9 +78,9 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
         }
 
         // Ejecutar: checkout base → pull → create branch
-        await gitExec(['checkout', config.baseBranch])
-        await gitExec(['pull', 'origin', config.baseBranch])
-        await gitExec(['checkout', '-b', branchName])
+        await gitExec(['checkout', config.baseBranch], cwd)
+        await gitExec(['pull', 'origin', config.baseBranch], cwd)
+        await gitExec(['checkout', '-b', branchName], cwd)
 
         return {
           content: [{
@@ -104,8 +110,10 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
     },
     async (params) => {
       try {
+        const config = await storage.resolveProject(process.cwd())
+        const cwd = getProjectCwd(config)
         // Buscar en ramas locales y remotas
-        const allBranches = await gitExec(['branch', '-a', '--list', `*${params.issueKey}*`])
+        const allBranches = await gitExec(['branch', '-a', '--list', `*${params.issueKey}*`], cwd)
         const branches = allBranches
           .split('\n')
           .map((b) => b.trim().replace(/^\* /, '').replace(/^remotes\/origin\//, ''))
@@ -146,8 +154,11 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
     },
     async (params) => {
       try {
+        const config = await storage.resolveProject(process.cwd())
+        const cwd = getProjectCwd(config)
+
         // Guard: verificar working directory limpio
-        const status = await getWorkingDirStatus()
+        const status = await getWorkingDirStatus(cwd)
         if (!status.clean) {
           const parts: string[] = []
           if (status.uncommittedFiles.length > 0) {
@@ -165,8 +176,8 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
           }
         }
 
-        await gitExec(['checkout', params.branch])
-        const current = await getCurrentBranch()
+        await gitExec(['checkout', params.branch], cwd)
+        const current = await getCurrentBranch(cwd)
 
         return {
           content: [{
@@ -190,8 +201,10 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
     {},
     async () => {
       try {
-        const branch = await getCurrentBranch()
-        const output = await gitExec(['pull', 'origin', branch])
+        const config = await storage.resolveProject(process.cwd())
+        const cwd = getProjectCwd(config)
+        const branch = await getCurrentBranch(cwd)
+        const output = await gitExec(['pull', 'origin', branch], cwd)
 
         return {
           content: [{
@@ -223,7 +236,8 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
     async (params) => {
       try {
         const config = await storage.resolveProject(process.cwd())
-        const currentBranch = await getCurrentBranch()
+        const cwd = getProjectCwd(config)
+        const currentBranch = await getCurrentBranch(cwd)
 
         // Verificar regla no-merge-to-base
         const rules = await storage.getActiveRules('git', config.name)
@@ -268,7 +282,7 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
         }
 
         // Ejecutar merge
-        const result = await gitExecRaw(['merge', params.branch])
+        const result = await gitExecRaw(['merge', params.branch], cwd)
 
         // Merge limpio
         if (result.code === 0) {
@@ -286,7 +300,7 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
         }
 
         // Posible conflicto — listar archivos en conflicto
-        const conflictResult = await gitExecRaw(['diff', '--name-only', '--diff-filter=U'])
+        const conflictResult = await gitExecRaw(['diff', '--name-only', '--diff-filter=U'], cwd)
         const conflictedFiles = conflictResult.stdout
           .split('\n')
           .filter(Boolean)
@@ -333,10 +347,11 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
     },
     async (params) => {
       try {
-        const branch = await getCurrentBranch()
+        const config = await storage.resolveProject(process.cwd())
+        const cwd = getProjectCwd(config)
+        const branch = await getCurrentBranch(cwd)
 
         // Verificar regla no-merge-to-base
-        const config = await storage.resolveProject(process.cwd())
         const rules = await storage.getActiveRules('git', config.name)
         const noMergeRule = rules.find((r) => r.name === 'no-merge-to-base')
         if (noMergeRule && branch === config.baseBranch) {
@@ -350,7 +365,7 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
         }
 
         // Verificar que hay algo que pushear
-        const status = await getWorkingDirStatus()
+        const status = await getWorkingDirStatus(cwd)
         if (status.uncommittedFiles.length > 0) {
           return {
             isError: true,
@@ -391,7 +406,7 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
         }
 
         // Con confirm → ejecutar
-        const output = await gitExec(['push', 'origin', branch])
+        const output = await gitExec(['push', 'origin', branch], cwd)
 
         return {
           content: [{
@@ -424,7 +439,8 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
     async (params) => {
       try {
         const config = await storage.resolveProject(process.cwd())
-        const currentBranch = await getCurrentBranch()
+        const cwd = getProjectCwd(config)
+        const currentBranch = await getCurrentBranch(cwd)
 
         // Validar que no estemos en la rama base
         if (currentBranch === config.baseBranch) {

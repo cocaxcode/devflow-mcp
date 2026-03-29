@@ -13,7 +13,11 @@ export class JiraClient {
   private readonly authHeader: string
 
   constructor(config: ProjectConfig) {
-    this.baseUrl = config.jiraUrl.replace(/\/+$/, '')
+    const url = config.jiraUrl.replace(/\/+$/, '')
+    if (!/^https:\/\//i.test(url)) {
+      throw new Error('La URL de Jira debe usar HTTPS para proteger las credenciales.')
+    }
+    this.baseUrl = url
     this.apiVersion = config.jiraApiVersion
     this.authHeader = this.buildAuthHeader(config)
   }
@@ -141,12 +145,17 @@ export class JiraClient {
     jiraUrl: string,
     authHeader: string,
   ): Promise<{ jiraType: 'cloud' | 'server'; jiraApiVersion: '2' | '3' }> {
-    const url = `${jiraUrl.replace(/\/+$/, '')}/rest/api/2/serverInfo`
+    const cleanUrl = jiraUrl.replace(/\/+$/, '')
+    if (!/^https:\/\//i.test(cleanUrl)) {
+      throw new Error('La URL de Jira debe usar HTTPS para proteger las credenciales.')
+    }
+    const url = `${cleanUrl}/rest/api/2/serverInfo`
     const res = await fetch(url, {
       headers: {
         Authorization: authHeader,
         Accept: 'application/json',
       },
+      signal: AbortSignal.timeout(15_000),
     })
 
     if (!res.ok) {
@@ -168,14 +177,19 @@ export class JiraClient {
 
   // ── Private ──
 
-  private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  private async request<T>(method: string, path: string, body?: unknown): Promise<T>
+  private async request(method: string, path: string, body?: unknown): Promise<unknown> {
     const url = `${this.baseUrl}${path}`
     const headers: Record<string, string> = {
       Authorization: this.authHeader,
       Accept: 'application/json',
     }
 
-    const init: RequestInit = { method, headers }
+    const init: RequestInit = {
+      method,
+      headers,
+      signal: AbortSignal.timeout(30_000),
+    }
 
     if (body) {
       headers['Content-Type'] = 'application/json'
@@ -186,6 +200,9 @@ export class JiraClient {
     try {
       res = await fetch(url, init)
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'TimeoutError') {
+        throw new Error('Jira no responde (timeout 30s)')
+      }
       throw new Error(`Jira no accesible: ${err instanceof Error ? err.message : String(err)}`)
     }
 
@@ -202,8 +219,8 @@ export class JiraClient {
 
     // Algunas respuestas (como transition POST) no tienen body
     const text = await res.text()
-    if (!text) return undefined as T
-    return JSON.parse(text) as T
+    if (!text) return undefined
+    return JSON.parse(text)
   }
 
   private mapIssue(raw: JiraIssueResponse): JiraIssue {
@@ -232,7 +249,7 @@ export class JiraClient {
       status: { name: f.status?.name ?? 'Unknown', id: f.status?.id ?? '0' },
       priority: { name: f.priority?.name ?? 'None', id: f.priority?.id ?? '0' },
       assignee: f.assignee
-        ? { displayName: f.assignee.displayName, emailAddress: f.assignee.emailAddress }
+        ? { accountId: f.assignee.accountId ?? f.assignee.name ?? f.assignee.displayName, displayName: f.assignee.displayName, emailAddress: f.assignee.emailAddress }
         : null,
       reporter: f.reporter
         ? { displayName: f.reporter.displayName, emailAddress: f.reporter.emailAddress }

@@ -1,6 +1,7 @@
-import { mkdir, readFile, writeFile, readdir, unlink, chmod } from 'node:fs/promises'
+import { mkdir, readFile, writeFile, readdir, unlink, chmod, rename } from 'node:fs/promises'
+import { randomBytes } from 'node:crypto'
 import { homedir } from 'node:os'
-import { join, normalize } from 'node:path'
+import { join, dirname, normalize } from 'node:path'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import type { ProjectConfig, FlowDefinition, ServerConfig, Rule } from './types.js'
 import { DEFAULT_FLOW, DEFAULT_RULES } from './types.js'
@@ -103,7 +104,8 @@ export class Storage {
   async resolveProject(cwd: string): Promise<ProjectConfig> {
     const normalizedCwd = normalize(cwd).replace(/\\/g, '/')
 
-    // 1. Buscar por cwd en paths de todos los proyectos
+    // Buscar SOLO por cwd en paths de todos los proyectos.
+    // No hay fallback a active-project: si el directorio actual no es un proyecto configurado, se rechaza.
     const projects = await this.listProjects()
     for (const project of projects) {
       for (const path of project.paths) {
@@ -114,14 +116,12 @@ export class Storage {
       }
     }
 
-    // 2. Fallback: active-project manual
-    const activeName = await this.getActiveProject()
-    if (activeName) {
-      const project = await this.getProject(activeName)
-      if (project) return project
-    }
-
-    throw new Error('No hay proyecto activo. Usa df_project_setup o df_project_switch.')
+    const projectNames = projects.map((p) => p.name).join(', ')
+    throw new Error(
+      `El directorio actual (${normalizedCwd}) no coincide con ningún proyecto configurado.` +
+      (projectNames ? ` Proyectos disponibles: ${projectNames}.` : '') +
+      ' Navega al directorio del proyecto o usa df_project_setup para configurar uno nuevo.',
+    )
   }
 
   // ── Flows ──
@@ -290,7 +290,16 @@ export class Storage {
   }
 
   private async writeJson(filePath: string, data: unknown): Promise<void> {
-    await writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
+    // Atomic write: write to temp file, then rename
+    const tmpPath = join(dirname(filePath), `.tmp-${randomBytes(6).toString('hex')}`)
+    await writeFile(tmpPath, JSON.stringify(data, null, 2), 'utf-8')
+    try {
+      await rename(tmpPath, filePath)
+    } catch {
+      // Windows: rename can fail if target exists, fallback to write
+      await writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
+      await unlink(tmpPath).catch(() => {})
+    }
   }
 
   private async listJsonFiles(dir: string): Promise<string[]> {

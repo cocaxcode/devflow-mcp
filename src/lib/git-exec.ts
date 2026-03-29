@@ -16,9 +16,9 @@ export async function gitExec(args: string[], cwd?: string): Promise<string> {
 
 export async function gitExecRaw(args: string[], cwd?: string): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
-    execFile('git', args, { cwd, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+    const child = execFile('git', args, { cwd, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
       resolve({
-        code: error?.code ?? 0,
+        code: error ? (child.exitCode ?? 1) : 0,
         stdout: (stdout ?? '').trim(),
         stderr: (stderr ?? '').trim(),
       })

@@ -57,7 +57,7 @@ export interface JiraIssue {
   description: string | null
   status: { name: string; id: string }
   priority: { name: string; id: string }
-  assignee: { displayName: string; emailAddress?: string } | null
+  assignee: { accountId: string; displayName: string; emailAddress?: string } | null
   reporter: { displayName: string; emailAddress?: string }
   labels: string[]
   components: { name: string }[]
