@@ -19,6 +19,13 @@ describe('Flow Tools (integration)', () => {
     expect(flows.some((f: { name: string }) => f.name === 'start-task')).toBe(true)
   })
 
+  it.each(['START-TASK', 'start___task', '--start--task--'])('requires confirmation for default flow alias %s', async (name) => {
+    await callTool(ctx.client, 'df_flow_list')
+    const result = await callTool(ctx.client, 'df_flow_delete', { name })
+    expect(result.text).toContain('confirm: true')
+    expect((await callTool(ctx.client, 'df_flow_get', { name: 'start-task' })).isError).toBeFalsy()
+  })
+
   it('df_flow_get returns start-task detail', async () => {
     // Trigger ensureDefaultFlow first
     await callTool(ctx.client, 'df_flow_list')

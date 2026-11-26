@@ -16,7 +16,7 @@
     <img src="https://img.shields.io/npm/dm/@cocaxcode/devflow-mcp.svg?style=flat-square" alt="downloads" />
   </a>
   <img src="https://img.shields.io/badge/tools-32-blueviolet?style=flat-square" alt="tools" />
-  <img src="https://img.shields.io/badge/tests-51-brightgreen?style=flat-square" alt="tests" />
+  <img src="https://img.shields.io/badge/tests-81-brightgreen?style=flat-square" alt="tests" />
   <img src="https://img.shields.io/badge/node-%3E%3D20-339933?style=flat-square&logo=node.js&logoColor=white" alt="node" />
   <a href="https://github.com/cocaxcode/devflow-mcp/blob/master/LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="license" />
@@ -242,7 +242,7 @@ This gives you two concepts:
 
 - **Default project**: The project whose scope matches your current working directory. This is automatic and persistent — if you are inside `C:/repos/my-backend` and that directory is a scope of `my-backend`, then `my-backend` is the default. No action needed.
 
-- **Active project**: The project you are currently working with. By default it equals the default project, but you can switch it manually with `df_project_switch` for the current session. This resets to the default when you restart.
+- **Active project**: The project you are currently working with. By default it equals the default project, but you can switch it manually with `df_project_switch` for the current session. The selection lives in memory for that server instance: other clients do not change it, and restarting resets it to the default.
 
 `df_project_list` shows both the **default** and **active** indicators so you always know where you stand.
 
@@ -468,7 +468,6 @@ Everything lives in `~/.devflow-mcp/` — your home directory, never inside any 
 │   ├── no-merge-from-dev.json
 │   ├── no-close-issues.json
 │   └── only-own-issues.json
-├── active-project         # Current active project (plain text)
 └── config.json            # Server configuration
 ```
 

@@ -13,16 +13,21 @@ interface GitLabProjectResponse {
   path_with_namespace: string
 }
 
+function secureBaseUrl(baseUrl: string): string {
+  const url = new URL(baseUrl)
+  if (url.protocol !== 'https:' || url.username || url.password) {
+    throw new Error('La URL de GitLab debe usar HTTPS para proteger las credenciales.')
+  }
+  return baseUrl.replace(/\/+$/, '')
+}
+
 export class GitLabClient implements GitProviderClient {
   private readonly token: string
   private readonly baseUrl: string
   private readonly projectId: number
 
   constructor(token: string, baseUrl: string, projectId: number) {
-    const url = baseUrl.replace(/\/+$/, '')
-    if (!/^https:\/\//i.test(url)) {
-      throw new Error('La URL de GitLab debe usar HTTPS para proteger las credenciales.')
-    }
+    const url = secureBaseUrl(baseUrl)
     this.token = token
     this.baseUrl = url
     this.projectId = projectId
@@ -83,13 +88,14 @@ export class GitLabClient implements GitProviderClient {
     repo: string,
   ): Promise<number> {
     const encodedPath = encodeURIComponent(`${owner}/${repo}`)
-    const url = `${baseUrl.replace(/\/+$/, '')}/api/v4/projects/${encodedPath}`
+    const url = `${secureBaseUrl(baseUrl)}/api/v4/projects/${encodedPath}`
 
     const res = await fetch(url, {
       headers: {
         'PRIVATE-TOKEN': token,
         Accept: 'application/json',
       },
+      redirect: 'error',
       signal: AbortSignal.timeout(15_000),
     })
 
@@ -117,6 +123,7 @@ export class GitLabClient implements GitProviderClient {
     const init: RequestInit = {
       method,
       headers,
+      redirect: 'error',
       signal: AbortSignal.timeout(30_000),
     }
 

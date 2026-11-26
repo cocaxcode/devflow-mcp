@@ -201,9 +201,11 @@ export function registerJiraTools(server: McpServer, storage: Storage): void {
         const closeRules = await storage.getActiveRules('jira', config.name)
         const noCloseRule = closeRules.find((r) => r.name === 'no-close-issues')
         if (noCloseRule) {
-          const closedStatuses = ['done', 'closed', 'resolved', 'finalizado', 'cerrado', 'completado', 'terminado', 'hecho']
-          const targetName = target.to.name.toLowerCase()
-          if (closedStatuses.includes(targetName)) {
+          const category = target.to.statusCategory?.key
+          if (!category || !['new', 'indeterminate', 'done'].includes(category)) {
+            throw new Error('No se puede determinar la categoria del estado de destino; transicion bloqueada.')
+          }
+          if (category === 'done') {
             return {
               isError: true,
               content: [{

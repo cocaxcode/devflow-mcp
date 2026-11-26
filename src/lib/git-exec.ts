@@ -36,18 +36,19 @@ export async function getWorkingDirStatus(cwd?: string): Promise<WorkingDirStatu
     uncommittedFiles.push(...statusOutput.split('\n').filter(Boolean))
   }
 
-  // Commits sin pushear
-  try {
-    const logOutput = await gitExec(['log', '@{u}..', '--oneline'], cwd)
-    if (logOutput) {
-      unpushedCommits.push(...logOutput.split('\n').filter(Boolean))
-    }
-  } catch {
-    // No upstream configurado — no hay commits sin pushear por definicion
+  // Resolve upstream separately so other git errors are never mistaken for an empty log.
+  const upstream = await gitExecRaw(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], cwd)
+  let hasUpstream = true
+  if (upstream.code !== 0) {
+    if (/no upstream configured/i.test(upstream.stderr)) hasUpstream = false
+    else throw new Error(upstream.stderr || 'No se pudo resolver upstream')
   }
+  const logOutput = await gitExec(hasUpstream ? ['log', '@{u}..', '--oneline'] : ['log', '--oneline'], cwd)
+  if (logOutput) unpushedCommits.push(...logOutput.split('\n').filter(Boolean))
 
   return {
-    clean: uncommittedFiles.length === 0 && unpushedCommits.length === 0,
+    hasUpstream,
+    clean: hasUpstream && uncommittedFiles.length === 0 && unpushedCommits.length === 0,
     uncommittedFiles,
     unpushedCommits,
   }
