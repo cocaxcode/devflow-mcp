@@ -1,3 +1,5 @@
+![Devflow MCP — Your developer workflow, one conversation away](https://raw.githubusercontent.com/cocaxcode/devflow-mcp/master/assets/social-preview.png)
+
 <p align="center">
   <h1 align="center">@cocaxcode/devflow-mcp</h1>
   <p align="center">
