@@ -70,7 +70,7 @@ export interface JiraIssue {
 export interface JiraTransition {
   id: string
   name: string
-  to: { name: string; id: string }
+  to: { name: string; id: string; statusCategory?: { key?: string } }
 }
 
 // ── Git Types ──
@@ -85,6 +85,7 @@ export interface GitRemoteInfo {
 }
 
 export interface WorkingDirStatus {
+  hasUpstream: boolean
   clean: boolean
   uncommittedFiles: string[]
   unpushedCommits: string[]

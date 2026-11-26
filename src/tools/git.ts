@@ -9,6 +9,45 @@ function getProjectCwd(config: { paths: string[] }): string {
   return config.paths[0] ?? process.cwd()
 }
 
+async function validateBranchRef(ref: string, cwd: string): Promise<string> {
+  if (!ref || ref.startsWith('-') || ref.includes('@{') || (ref.startsWith('refs/') && !/^refs\/(heads|remotes)\//.test(ref))) {
+    throw new Error('Referencia de rama invalida')
+  }
+  const shortRef = ref.replace(/^refs\/(heads|remotes)\//, '')
+  const result = await gitExecRaw(['check-ref-format', '--branch', shortRef], cwd)
+  if (result.code !== 0) throw new Error('Referencia de rama invalida')
+  if (ref.startsWith('refs/heads/')) return shortRef
+  const remotes = (await gitExec(['remote'], cwd)).split('\n').filter(Boolean)
+  const remoteRef = shortRef.replace(/^remotes\//, '')
+  const remote = remotes.find((name) => remoteRef.startsWith(`${name}/`))
+  if (remote) return remoteRef.slice(remote.length + 1)
+  if (ref.startsWith('refs/remotes/') || ref.startsWith('remotes/')) return remoteRef.replace(/^[^/]+\//, '')
+  // Origin is the default remote even before it has been configured.
+  return remoteRef.replace(/^origin\//, '')
+}
+
+async function resolveMergeRef(ref: string, cwd: string): Promise<{ ref: string; branch: string }> {
+  await validateBranchRef(ref, cwd)
+  const candidates = new Set([ref, `refs/${ref}`, `refs/tags/${ref}`, `refs/heads/${ref}`, `refs/remotes/${ref}`, `refs/remotes/${ref}/HEAD`])
+  const refs = (await gitExec(['for-each-ref', '--format=%(refname)'], cwd)).split('\n').filter((name) => candidates.has(name))
+  if (refs.length !== 1) throw new Error('Referencia de rama ambigua o inexistente')
+  const symbolic = await gitExecRaw(['symbolic-ref', '-q', refs[0]], cwd)
+  const resolved = symbolic.code === 0 ? symbolic.stdout : refs[0]
+  let branch: string
+  if (resolved.startsWith('refs/heads/')) {
+    branch = resolved.slice('refs/heads/'.length)
+  } else if (resolved.startsWith('refs/remotes/')) {
+    const remoteBranch = resolved.slice('refs/remotes/'.length)
+    const remotes = (await gitExec(['remote'], cwd)).split('\n').filter(Boolean)
+    const remote = remotes.sort((a, b) => b.length - a.length).find((name) => remoteBranch.startsWith(`${name}/`))
+    if (!remote) throw new Error('Referencia remota invalida')
+    branch = remoteBranch.slice(remote.length + 1)
+  } else {
+    throw new Error('La referencia no corresponde a una rama local o remota')
+  }
+  return { ref: resolved, branch }
+}
+
 export function registerGitTools(server: McpServer, storage: Storage): void {
   // ── df_branch ──
   server.tool(
@@ -32,6 +71,7 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
           if (status.uncommittedFiles.length > 0) {
             parts.push(`Archivos sin commitear:\n${status.uncommittedFiles.join('\n')}`)
           }
+          if (!status.hasUpstream) parts.push('La rama actual no tiene upstream configurado.')
           if (status.unpushedCommits.length > 0) {
             parts.push(`Commits sin pushear:\n${status.unpushedCommits.join('\n')}`)
           }
@@ -45,6 +85,8 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
         }
 
         const branchName = `${params.type}/${params.issueKey}-${params.description}`
+        await validateBranchRef(branchName, cwd)
+        await validateBranchRef(config.baseBranch, cwd)
 
         // Sin confirm → preview
         if (!params.confirm) {
@@ -157,6 +199,8 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
         const config = await storage.resolveProject(process.cwd())
         const cwd = getProjectCwd(config)
 
+        await validateBranchRef(params.branch, cwd)
+
         // Guard: verificar working directory limpio
         const status = await getWorkingDirStatus(cwd)
         if (!status.clean) {
@@ -164,6 +208,7 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
           if (status.uncommittedFiles.length > 0) {
             parts.push(`Archivos sin commitear:\n${status.uncommittedFiles.join('\n')}`)
           }
+          if (!status.hasUpstream) parts.push('La rama actual no tiene upstream configurado.')
           if (status.unpushedCommits.length > 0) {
             parts.push(`Commits sin pushear:\n${status.unpushedCommits.join('\n')}`)
           }
@@ -176,7 +221,26 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
           }
         }
 
-        await gitExec(['checkout', params.branch], cwd)
+        const resolution = await gitExecRaw(
+          ['rev-parse', '--symbolic-full-name', '--verify', '--end-of-options', params.branch],
+          cwd,
+        )
+        let resolvedRef = resolution.stdout
+        if (resolution.code !== 0) {
+          const remotes = (await gitExec(['remote'], cwd)).split('\n').filter(Boolean)
+          const refs = (await gitExec(['for-each-ref', '--format=%(refname)', 'refs/remotes/'], cwd)).split('\n')
+          const matches = remotes.map((remote) => `refs/remotes/${remote}/${params.branch}`).filter((ref) => refs.includes(ref))
+          if (matches.length !== 1) throw new Error('Referencia remota ambigua o inexistente')
+          resolvedRef = matches[0]
+        }
+        if (resolvedRef.startsWith('refs/remotes/')) {
+          // Create an attached local tracking branch rather than checking out a remote in detached HEAD.
+          await gitExec(['switch', '--track', '--', resolvedRef], cwd)
+        } else if (resolvedRef.startsWith('refs/heads/')) {
+          await gitExec(['switch', '--', resolvedRef.slice('refs/heads/'.length)], cwd)
+        } else {
+          throw new Error('La referencia no corresponde a una rama local o remota')
+        }
         const current = await getCurrentBranch(cwd)
 
         return {
@@ -237,12 +301,13 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
       try {
         const config = await storage.resolveProject(process.cwd())
         const cwd = getProjectCwd(config)
+        const source = await resolveMergeRef(params.branch, cwd)
         const currentBranch = await getCurrentBranch(cwd)
 
         // Verificar regla no-merge-to-base
         const rules = await storage.getActiveRules('git', config.name)
         const noMergeRule = rules.find((r) => r.name === 'no-merge-to-base')
-        if (noMergeRule && currentBranch === config.baseBranch) {
+        if (noMergeRule && currentBranch === await validateBranchRef(config.baseBranch, cwd)) {
           return {
             isError: true,
             content: [{
@@ -255,7 +320,7 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
         // Verificar regla no-merge-from-dev
         const devBranches = ['int', 'integration', 'dev', 'develop', 'development']
         const noMergeFromDevRule = rules.find((r) => r.name === 'no-merge-from-dev')
-        if (noMergeFromDevRule && devBranches.includes(params.branch)) {
+        if (noMergeFromDevRule && devBranches.includes(source.branch)) {
           return {
             isError: true,
             content: [{
@@ -282,7 +347,7 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
         }
 
         // Ejecutar merge
-        const result = await gitExecRaw(['merge', params.branch], cwd)
+        const result = await gitExecRaw(['merge', '--', source.ref], cwd)
 
         // Merge limpio
         if (result.code === 0) {
@@ -351,10 +416,27 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
         const cwd = getProjectCwd(config)
         const branch = await getCurrentBranch(cwd)
 
+        const status = await getWorkingDirStatus(cwd)
+        let remote = 'origin'
+        let destination = `refs/heads/${branch}`
+        if (status.hasUpstream) {
+          const remoteConfig = await gitExec(['config', '--get-all', `branch.${branch}.remote`], cwd)
+          const mergeConfig = await gitExec(['config', '--get-all', `branch.${branch}.merge`], cwd)
+          if (remoteConfig.includes('\n') || mergeConfig.includes('\n') || !mergeConfig.startsWith('refs/heads/')) {
+            throw new Error('Upstream ambiguo o invalido')
+          }
+          remote = remoteConfig
+          destination = mergeConfig
+        }
+        if (!branch || remote.startsWith('-') || !remote || destination !== `refs/heads/${await validateBranchRef(destination, cwd)}`) {
+          throw new Error('Destino de push invalido')
+        }
+
         // Verificar regla no-merge-to-base
         const rules = await storage.getActiveRules('git', config.name)
         const noMergeRule = rules.find((r) => r.name === 'no-merge-to-base')
-        if (noMergeRule && branch === config.baseBranch) {
+        const baseBranch = await validateBranchRef(config.baseBranch, cwd)
+        if (noMergeRule && (branch === baseBranch || destination === `refs/heads/${baseBranch}`)) {
           return {
             isError: true,
             content: [{
@@ -365,7 +447,6 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
         }
 
         // Verificar que hay algo que pushear
-        const status = await getWorkingDirStatus(cwd)
         if (status.uncommittedFiles.length > 0) {
           return {
             isError: true,
@@ -398,7 +479,7 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
                 preview: true,
                 branch,
                 commits: status.unpushedCommits,
-                action: `git push origin ${branch}`,
+                action: `git push --no-follow-tags --recurse-submodules=no ${status.hasUpstream ? '' : '--set-upstream '}${remote} refs/heads/${branch}:${destination}`,
                 message: 'Usa confirm: true para ejecutar el push.',
               }, null, 2),
             }],
@@ -406,7 +487,7 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
         }
 
         // Con confirm → ejecutar
-        const output = await gitExec(['push', 'origin', branch], cwd)
+        const output = await gitExec(['push', '--no-follow-tags', '--recurse-submodules=no', ...(status.hasUpstream ? [] : ['--set-upstream']), '--', remote, `refs/heads/${branch}:${destination}`], cwd)
 
         return {
           content: [{
@@ -443,7 +524,7 @@ export function registerGitTools(server: McpServer, storage: Storage): void {
         const currentBranch = await getCurrentBranch(cwd)
 
         // Validar que no estemos en la rama base
-        if (currentBranch === config.baseBranch) {
+        if (currentBranch === await validateBranchRef(config.baseBranch, cwd)) {
           return {
             isError: true,
             content: [{

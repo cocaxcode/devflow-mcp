@@ -6,7 +6,7 @@ import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import type { ProjectConfig, FlowDefinition, ServerConfig, Rule } from './types.js'
 import { DEFAULT_FLOW, DEFAULT_RULES } from './types.js'
 
-function sanitizeName(name: string): string {
+export function sanitizeName(name: string): string {
   return name
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, '-')
@@ -14,23 +14,12 @@ function sanitizeName(name: string): string {
     .replace(/^-|-$/g, '')
 }
 
-/** Limpia el active de sesión al arrancar — cada sesión empieza con el default por scope */
-export async function clearSessionActive(): Promise<void> {
-  const baseDir = process.env.DEVFLOW_MCP_DIR ?? join(homedir(), '.devflow-mcp')
-  const activeProjectFile = join(baseDir, 'active-project')
-  try {
-    await unlink(activeProjectFile)
-  } catch {
-    // No existe, ok
-  }
-}
-
 export class Storage {
   private readonly baseDir: string
   private readonly projectsDir: string
   private readonly flowsDir: string
   private readonly rulesDir: string
-  private readonly activeProjectFile: string
+  private activeProject: string | null = null
   private readonly configFile: string
 
   constructor(baseDir?: string) {
@@ -38,7 +27,6 @@ export class Storage {
     this.projectsDir = join(this.baseDir, 'projects')
     this.flowsDir = join(this.baseDir, 'flows')
     this.rulesDir = join(this.baseDir, 'rules')
-    this.activeProjectFile = join(this.baseDir, 'active-project')
     this.configFile = join(this.baseDir, 'config.json')
   }
 
@@ -73,43 +61,25 @@ export class Storage {
 
     await unlink(join(this.projectsDir, `${sanitizeName(name)}.json`))
 
-    // Limpiar active-project si era el activo
-    try {
-      const active = await readFile(this.activeProjectFile, 'utf-8')
-      if (active.trim() === name) {
-        await unlink(this.activeProjectFile)
-      }
-    } catch {
-      // No hay active-project
+    if (this.activeProject && sanitizeName(this.activeProject) === sanitizeName(name)) {
+      this.activeProject = null
     }
   }
 
   // ── Active Project ──
 
   async getActiveProject(): Promise<string | null> {
-    try {
-      const content = await readFile(this.activeProjectFile, 'utf-8')
-      return content.trim() || null
-    } catch {
-      return null
-    }
+    return this.activeProject
   }
 
   async setActiveProject(name: string): Promise<void> {
     const project = await this.getProject(name)
-    if (!project) {
-      throw new Error(`Proyecto '${name}' no encontrado`)
-    }
-    await this.ensureDir()
-    await writeFile(this.activeProjectFile, name, 'utf-8')
+    if (!project) throw new Error(`Proyecto '${name}' no encontrado`)
+    this.activeProject = name
   }
 
   async clearActiveProject(): Promise<void> {
-    try {
-      await unlink(this.activeProjectFile)
-    } catch {
-      // Ya no existe
-    }
+    this.activeProject = null
   }
 
   /** Resuelve el proyecto activo: 1) active de sesión, 2) default por scope (CWD en paths) */

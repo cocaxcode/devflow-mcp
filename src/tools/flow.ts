@@ -1,3 +1,4 @@
+import { sanitizeName } from '../lib/storage.js'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import type { Storage } from '../lib/storage.js'
@@ -204,7 +205,7 @@ export function registerFlowTools(server: McpServer, storage: Storage): void {
     async (params) => {
       try {
         // Proteger flow default
-        if (params.name === 'start-task' && !params.confirm) {
+        if (sanitizeName(params.name) === 'start-task' && !params.confirm) {
           return {
             content: [{
               type: 'text' as const,

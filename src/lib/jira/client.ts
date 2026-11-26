@@ -88,7 +88,7 @@ export class JiraClient {
     return response.transitions.map((t) => ({
       id: t.id,
       name: t.name,
-      to: { name: t.to.name, id: t.to.id },
+      to: { name: t.to.name, id: t.to.id, statusCategory: t.to.statusCategory },
     }))
   }
 

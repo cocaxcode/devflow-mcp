@@ -55,7 +55,7 @@ export interface JiraSearchV3Response {
 export interface JiraTransitionResponse {
   id: string
   name: string
-  to: { name: string; id: string; statusCategory: { name: string } }
+  to: { name: string; id: string; statusCategory?: { key?: string; name?: string } }
 }
 
 export interface JiraTransitionsResponse {

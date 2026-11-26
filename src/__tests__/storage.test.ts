@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Storage } from '../lib/storage.js'
@@ -35,6 +35,25 @@ describe('Storage', () => {
 
   afterEach(async () => {
     await rm(tempDir, { recursive: true, force: true })
+  })
+
+  it('keeps active projects isolated between instances', async () => {
+    await storage.saveProject(makeProject('alpha', ['/alpha']))
+    await storage.saveProject(makeProject('beta', ['/beta']))
+    const other = new Storage(tempDir)
+    await storage.setActiveProject('beta')
+    expect((await other.resolveProject('/alpha')).name).toBe('alpha')
+  })
+
+  it('ignores old persisted selection and does not clear another instance', async () => {
+    await storage.saveProject(makeProject('alpha', ['/alpha']))
+    await storage.saveProject(makeProject('beta', ['/beta']))
+    await writeFile(join(tempDir, 'active-project'), 'beta')
+    const other = new Storage(tempDir)
+    expect((await other.resolveProject('/alpha')).name).toBe('alpha')
+    await storage.setActiveProject('beta')
+    await other.clearActiveProject()
+    expect(await storage.getActiveProject()).toBe('beta')
   })
 
   // ── Projects ──
