@@ -10,4 +10,4 @@ startCommand:
         description: Directory for storing devflow config and projects.
   commandFunction:
     |-
-      (config) => ({ command: 'npx', args: ['-y', '@cocaxcode/devflow-mcp'], env: config.devflowDir ? { DEVFLOW_DIR: config.devflowDir } : {} })
+      (config) => ({ command: 'npx', args: ['-y', '@cocaxcode/devflow-mcp'], env: config.devflowDir ? { DEVFLOW_MCP_DIR: config.devflowDir } : {} })
